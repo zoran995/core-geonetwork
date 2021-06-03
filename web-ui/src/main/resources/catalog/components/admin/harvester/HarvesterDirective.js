@@ -63,11 +63,11 @@
           };
           $http.get('admin.harvester.info?type=icons&_content_type=json',
               {cache: true})
-              .success(function(data) {
+              .then(function(data) {
                 scope.icons = data[0];
               });
           $http.get('info?_content_type=json&type=languages', {cache: true})
-              .success(function(data) {
+              .then(function(data) {
                 scope.languages = data.language;
               });
         }
@@ -191,7 +191,7 @@
                $http.get('info?_content_type=json&' +
                'type=groupsIncludingSystemGroups',
                {cache: true})
-               .success(function(data) {
+               .then(function(data) {
                  scope.groups = data !== 'null' ? data.group : null;
                });
              }
@@ -253,7 +253,7 @@
             link: function(scope, element, attrs) {
               $http.get('admin.harvester.info?type=icons&_content_type=json',
                   {cache: true})
-                  .success(function(data) {
+                  .then(function(data) {
                     scope.icons = data[0];
                   });
 
@@ -280,7 +280,7 @@
             link: function(scope, element, attrs) {
 
               $http.get('../api/languages', {cache: true})
-                  .success(function(data) {
+                  .then(function(data) {
                     scope.languages = data;
                   });
             }

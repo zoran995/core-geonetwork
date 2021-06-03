@@ -43,7 +43,7 @@
           'harvestervalidation.html',
       link: function(scope, element, attrs) {
         $http.get('admin.harvester.info?type=validation&_content_type=json')
-            .success(function(data) {
+            .then(function(data) {
               scope.validation = data[0];
             });
       }

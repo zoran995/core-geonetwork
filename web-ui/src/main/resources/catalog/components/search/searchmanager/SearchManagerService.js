@@ -179,13 +179,12 @@
        */
       var search = function(url, error) {
         var defer = $q.defer();
-        $http.get(url).
-            success(function(data, status) {
-              defer.resolve(format(data));
-            }).
-            error(function(data, status) {
-              defer.reject(error);
-            });
+        $http.get(url)
+          .then(function(data, status) {
+            defer.resolve(format(data));
+          }, function(data, status) {
+            defer.reject(error);
+          });
         return defer.promise;
       };
 
@@ -194,13 +193,12 @@
       var gnSearch = function(params, error, internal) {
         var defer = $q.defer();
         gnHttp.callService(internal ? 'internalSearch' : 'search',
-            params).
-            success(function(data, status) {
-              defer.resolve(format(data));
-            }).
-            error(function(data, status) {
-              defer.reject(error);
-            });
+            params)
+          .then(function(data, status) {
+            defer.resolve(format(data));
+          }, function(data, status) {
+            defer.reject(error);
+          });
         return defer.promise;
       };
 
@@ -234,13 +232,12 @@
         url += '&fromSelection=';
         url += fromSelection ? 'yes' : 'no';
 
-        $http.get(url).
-            success(function(data, status) {
-              defer.resolve(data);
-            }).
-            error(function(data, status) {
-              defer.reject(error);
-            });
+        $http.get(url)
+          .then(function(data, status) {
+            defer.resolve(data);
+          }, function(data, status) {
+            defer.reject(error);
+          });
         return defer.promise;
       };
       var selected = function(bucket) {

@@ -151,13 +151,13 @@
         if ($scope.user.profile == null) return;
 
         if ($scope.user.profile === 'Administrator') {
-          $http.get('../api/groups').success(function(data) {
+          $http.get('../api/groups').then(function(data) {
             $scope.groups = data;
-          }).error(function(data) {
+          }, function(data) {
             // TODO
           });
         } else {
-          $http.get('../api/users/' + $scope.user.id + '/groups').success(function(data) {
+          $http.get('../api/users/' + $scope.user.id + '/groups').then(function(data) {
             // Extract the group property from user groups array
             var groups = _.map(data, 'group');
 
@@ -166,7 +166,7 @@
               return e.id;
             });
 
-          }).error(function(data) {
+          }, function(data) {
             // TODO
           });
 

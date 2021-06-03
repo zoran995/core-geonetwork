@@ -188,11 +188,11 @@
 
       function loadEditors() {
         $http.get('../api/users/owners')
-            .success(function(data) {
+            .then(function(data) {
               $scope.editors = data;
             });
         $http.get('../api/users/groups')
-            .success(function(data) {
+            .then(function(data) {
               var uniqueUserGroups = {};
               angular.forEach(data, function(g) {
                 var key = g.groupId + '-' + g.userId;
@@ -209,7 +209,7 @@
       $scope.selectUser = function(id) {
         $scope.editorSelectedId = id;
         $http.get('../api/users/' + id + '/groups')
-            .success(function(data) {
+            .then(function(data) {
               var uniqueGroup = {};
               angular.forEach(data, function(g) {
                 if (!uniqueGroup[g.group.id]) {
@@ -230,7 +230,7 @@
           sourceGroup: parseInt(sourceGroup),
           targetUser: params.targetGroup.userId,
           targetGroup: params.targetGroup.groupId
-        }).success(function(data) {
+        }).then(function(data) {
           $rootScope.$broadcast('StatusUpdated', {
             msg: $translate.instant('transfertPrivilegesFinished',
                 {
@@ -239,7 +239,7 @@
             timeout: 2,
             type: 'success'});
           params.running = false;
-        }).error(function(data) {
+        }, function(data) {
           // TODO
           params.running = false;
         });
@@ -251,7 +251,7 @@
       function loadProcessConfig() {
         $http.get(gnGlobalSettings.gnUrl +
             '../catalog/config/batch-process-cfg.json')
-            .success(function(data) {
+            .then(function(data) {
               $scope.batchProcesses = data.config;
 
               $timeout(initProcessByRoute);
@@ -260,26 +260,26 @@
 
       function loadGroups() {
         $http.get('../api/groups').
-            success(function(data) {
+            then(function(data) {
               $scope.batchSearchGroups = data;
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
       }
       function loadUsers() {
         $http.get('../api/users').
-            success(function(data) {
+            then(function(data) {
               $scope.batchSearchUsers = data;
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
       }
 
       function loadCategories() {
         $http.get('../api/tags').
-            success(function(data) {
+            then(function(data) {
               $scope.batchSearchCategories = data;
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
       }
@@ -293,7 +293,7 @@
       function checkLastBatchProcessReport() {
         // Check if processing
         return $http.get('../api/processes/reports').
-            success(function(data, status) {
+            then(function(data, status) {
               // TODO: Assume one process is running
               // Should use the process ID to register and retrieve a process
               $scope.processReport = data[0];
@@ -326,7 +326,7 @@
         $scope.processReport = null;
         $http.post(service + '?' +
                    formParams)
-            .success(function(data) {
+            .then(function(data) {
               $scope.processReport = data;
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('processFinished'),
@@ -340,8 +340,7 @@
               // if (service.indexOf('search-and-replace') === -1) {
               //   checkLastBatchProcessReport();
               // }
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('processError'),
                 error: data,
@@ -420,7 +419,7 @@
       function checkIsIndexing() {
         // Check if indexing
         return $http.get('../api/site/indexing').
-            success(function(data, status) {
+            then(function(data, status) {
               $scope.isIndexing = data;
               if ($scope.isIndexing) {
                 $timeout(checkIsIndexing, indexCheckInterval);
@@ -428,7 +427,7 @@
               // Get the number of records (template, records, subtemplates)
               $http.get('qi?_content_type=json&' +
                  'template=y or n or s&summaryOnly=true').
-                 success(function(data, status) {
+                 then(function(data, status) {
                    $scope.numberOfIndexedRecords = data[0]['@count'];
                  });
             });
@@ -438,10 +437,9 @@
 
       $scope.rebuildIndex = function() {
         return $http.get('admin.index.rebuild?reset=yes')
-            .success(function(data) {
+            .then(function(data) {
               checkIsIndexing();
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('rebuildIndexError'),
                 error: data,
@@ -451,13 +449,12 @@
       };
       $scope.indexInEs = function() {
         return $http.put('../api/site/index/es')
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('indexInEsDone'),
                 timeout: 2,
                 type: 'success'});
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('indexInEsDoneError'),
                 error: data,
@@ -468,14 +465,13 @@
 
       $scope.optimizeIndex = function() {
         return $http.get('admin.index.optimize')
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('indexOptimizationInProgress'),
                 timeout: 2,
                 type: 'success'});
               // TODO: Does this is asynch and make the search unavailable?
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('rebuildIndexError'),
                 error: data,
@@ -486,13 +482,12 @@
 
       $scope.reloadLuceneConfig = function() {
         return $http.get('admin.index.config.reload')
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('luceneConfigReloaded'),
                 timeout: 2,
                 type: 'success'});
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('rebuildIndexError'),
                 error: data,
@@ -503,14 +498,13 @@
 
       $scope.clearXLinkCache = function() {
         return $http.get('admin.index.rebuildxlinks')
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('xlinkCacheCleared'),
                 timeout: 2,
                 type: 'success'});
               // TODO: Does this is asynch and make the search unavailable?
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('rebuildIndexError'),
                 error: data,
@@ -521,9 +515,9 @@
 
       $scope.clearJsCache = function() {
         return $http.get('../../static/wroAPI/reloadModel')
-            .success(function(data) {
+            .then(function(data) {
               $http.get('../../static/wroAPI/reloadCache')
-              .success(function(data) {
+              .then(function(data) {
                    $rootScope.$broadcast('StatusUpdated', {
                      msg: $translate.instant('jsCacheCleared'),
                      timeout: 2,
@@ -534,13 +528,12 @@
 
       $scope.clearFormatterCache = function() {
         return $http.delete('../api/formatters/cache')
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('formatterCacheCleared'),
                 timeout: 2,
                 type: 'success'});
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('formatCacheClearFailure'),
                 error: data,

@@ -44,7 +44,7 @@
             'importxsl.html',
         link: function(scope, element, attrs) {
           $http.get('../api/site/info/transforms')
-              .success(function(data) {
+              .then(function(data) {
                 scope.stylesheets = data;
                 scope.stylesheets.unshift('');
                 if (angular.isUndefined(scope.element) || angular.isObject(scope.element)) {

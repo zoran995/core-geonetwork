@@ -164,16 +164,16 @@
       };
 
       var init = function() {
-        $http.get('../api/groups?profile=Editor', {cache: true}).
-            success(function(data) {
-              $scope.groups = data;
-              // Select first user group with editor privileges.
-              // TODO: User should be able to select the group to put
-              // the entry in.
-              if ($scope.ownerGroup === null && data) {
-                $scope.ownerGroup = data[0]['id'];
-              }
-            });
+        $http.get('../api/groups?profile=Editor', {cache: true})
+          .then(function(data) {
+            $scope.groups = data;
+            // Select first user group with editor privileges.
+            // TODO: User should be able to select the group to put
+            // the entry in.
+            if ($scope.ownerGroup === null && data) {
+              $scope.ownerGroup = data[0]['id'];
+            }
+          });
 
         refreshEntriesInfo();
       };

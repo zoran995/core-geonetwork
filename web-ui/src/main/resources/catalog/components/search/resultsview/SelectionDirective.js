@@ -74,7 +74,7 @@
 
           // initial state
           gnSearchManagerService.selected(scope.searchResults.selectionBucket)
-              .success(function(res) {
+              .then(function(res) {
                 if (angular.isArray(res)) {
                   scope.searchResults.selectedCount = res.length;
                 }
@@ -141,7 +141,7 @@
 
             gnSearchManagerService.select(uuids,
                 scope.searchResults.selectionBucket)
-                .success(function(res) {
+                .then(function(res) {
                   scope.searchResults.selectedCount = parseInt(res, 10);
                 });
           };
@@ -149,7 +149,7 @@
           scope.selectAll = function() {
             gnSearchManagerService.selectAll(
                 scope.searchResults.selectionBucket)
-                .success(function(res) {
+                .then(function(res) {
                   scope.searchResults.selectedCount = parseInt(res, 10);
                   scope.searchResults.records.forEach(function(record) {
                     record['geonet:info'].selected = true;
@@ -160,7 +160,7 @@
           scope.unSelectAll = function() {
             gnSearchManagerService.selectNone(
                 scope.searchResults.selectionBucket)
-                .success(function(res) {
+                .then(function(res) {
                   scope.searchResults.selectedCount = parseInt(res, 10);
                   scope.searchResults.records.forEach(function(record) {
                     record['geonet:info'].selected = false;
@@ -202,10 +202,10 @@
           scope.change = function() {
             var method = element[0].checked ? 'select' : 'unselect';
             gnSearchManagerService[method](
-                scope.md.getUuid(), scope.searchResults.selectionBucket).
-                success(function(res) {
-                  scope.searchResults.selectedCount = parseInt(res, 10);
-                });
+                scope.md.getUuid(), scope.searchResults.selectionBucket)
+              .then(function(res) {
+                scope.searchResults.selectedCount = parseInt(res, 10);
+              });
           };
 
         }

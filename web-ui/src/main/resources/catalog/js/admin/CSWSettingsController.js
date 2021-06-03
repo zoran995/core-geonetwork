@@ -104,7 +104,7 @@
          */
       function loadSettings() {
         $http.get('admin.config.list?_content_type=json&asTree=false')
-            .success(function(data) {
+            .then(function(data) {
               for (var i = 0; i < data.length; i++) {
                 var setting = data[i];
                 if (cswBooleanSettings.indexOf(setting['@name']) !== -1) {
@@ -116,7 +116,7 @@
                 }
               }
               loadServiceRecords();
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
       }
@@ -139,7 +139,7 @@
 
       function loadCSWConfig() {
         $http.get('admin.config.csw?_content_type=json&').
-            success(function(data) {
+            then(function(data) {
               $scope.cswConfig = data;
               angular.forEach($scope.cswConfig.capabilitiesInfoFields,
                   function(value, key) {
@@ -149,14 +149,14 @@
                         capabilitiesInfoFields[key].fieldName] = true;
                   });
               loadSettings();
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
       }
 
       function loadCSWElementSetName() {
         $http.get('admin.config.csw.customelementset?_content_type=json&')
-            .success(function(data) {
+            .then(function(data) {
               if (data) {
                 $scope.cswElementSetName =
                     $.isArray(data.xpaths) ? data.xpaths : [data.xpaths];
@@ -179,7 +179,7 @@
           data: '_content_type=json&' + $(formId).serialize(),
           headers: {'Content-Type': 'application/x-www-form-urlencoded'}
         })
-            .success(function(data) {
+            .then(function(data) {
               loadCSWElementSetName();
             });
       };
@@ -206,19 +206,19 @@
           data: gnUtilityService.serialize(formId),
           headers: {'Content-Type': 'application/x-www-form-urlencoded'}
         })
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('settingsUpdated'),
                 timeout: 2,
                 type: 'success'});
-            })
-            .error(function(data) {
-                  $rootScope.$broadcast('StatusUpdated', {
-                    title: $translate.instant('settingsUpdateError'),
-                    error: data,
-                    timeout: 0,
-                    type: 'danger'});
-                });
+            }, function(data) {
+              $rootScope.$broadcast('StatusUpdated', {
+                title: $translate.instant('settingsUpdateError'),
+                error: data,
+                timeout: 0,
+                type: 'danger'
+              });
+            });
       };
 
       /**

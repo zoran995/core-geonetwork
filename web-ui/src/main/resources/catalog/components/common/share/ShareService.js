@@ -139,7 +139,7 @@
               '/sharing';
 
           $http.get(url)
-              .success(function(data) {
+              .then(function(data) {
                 var groups = data.privileges;
 
                 // Promote custom topgroups

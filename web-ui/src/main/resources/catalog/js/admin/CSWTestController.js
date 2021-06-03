@@ -49,14 +49,14 @@
       $scope.cswVirtual = null;
 
       function loadCSWTest() {
-        $http.get('../../xml/csw/test/csw-tests.json').success(function(data) {
+        $http.get('../../xml/csw/test/csw-tests.json').then(function(data) {
           $scope.cswTests = data;
         });
 
-        $http.get('../api/csw/virtuals').
-            success(function(data) {
-              $scope.cswVirtual = data;
-            });
+        $http.get('../api/csw/virtuals')
+          .then(function(data) {
+            $scope.cswVirtual = data;
+          });
       }
 
       $scope.setCswUrl = function(url) {
@@ -68,7 +68,7 @@
           $http.get('../../xml/csw/test/' + $scope.currentTestId + '.xml', {headers: {
               Accept: 'application/xml'
             }})
-              .success(function(data) {
+              .then(function(data) {
                 $scope.currentTest = data;
                 $scope.runCSWRequest();
               });
@@ -79,7 +79,7 @@
         $scope.currentTestResponse = '';
         $http.post($scope.cswUrl, $scope.currentTest, {
           headers: {'Content-type': 'application/xml'}
-        }).success(function(data) {
+        }).then(function(data) {
           $scope.currentTestResponse = data;
         });
       };

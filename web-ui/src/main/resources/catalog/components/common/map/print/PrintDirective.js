@@ -73,7 +73,7 @@
           overlayCanvas.width = width;
           overlayCanvas.height = height;
           var ctx = overlayCanvas.getContext('2d');
-          
+
 
           var minx, miny, maxx, maxy;
           minx = printRectangle[0], miny = printRectangle[1],
@@ -106,7 +106,7 @@
       // Get print config
       var updatePrintConfig = function() {
         var http = $http.get($scope.options.printConfigUrl);
-        http.success(function(data) {
+        http.then(function(data) {
           $scope.capabilities = data;
 
           // default values:
@@ -499,7 +499,7 @@
               customParams: {
                 'EXCEPTIONS': 'XML',
                 'TRANSPARENT': 'true',
-                'CRS': proj.getCode(), 
+                'CRS': proj.getCode(),
                 'TIME': params.TIME
               },
               singleTile: config.singleTile || true

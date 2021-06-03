@@ -48,13 +48,12 @@
           url += '?id=' + metadataId;
         }
         var defer = $q.defer();
-        $http.get(url).
-            success(function(data, status) {
-              defer.resolve(format(data));
-            }).
-            error(function(data, status) {
-              defer.reject(data);
-            });
+        $http.get(url)
+          .then(function(data, status) {
+            defer.resolve(format(data));
+          }, function(data, status) {
+            defer.reject(data);
+          });
         return defer.promise;
       };
 

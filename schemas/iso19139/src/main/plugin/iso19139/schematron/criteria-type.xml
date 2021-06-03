@@ -81,7 +81,7 @@
         var addUniqueTokens = function (string) {
         var parts = string.split(regex);
         for (var i = 0; i &lt; parts.length; i++) {
-        var token = angular.lowercase(parts[i]);
+        var token = parts[i].toLowerCase();
         if (!tokenHash[token]) {
         tokens.push(token);
         tokenHash[token] = true;

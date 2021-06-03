@@ -32,7 +32,7 @@
 
       // add potential items like "en-schema-iso19139.ca.HNAP.json"
       $http.get('../api/standards')
-        .success(function(data) {
+        .then(function(data) {
              var locals =$LOCALES;
              var files = _.map(data,function(s){
                   $LOCALES.push("schema-"+s.name);

@@ -102,20 +102,21 @@
             headers: {
               'Accept-Language': options.key
             }
-          }).success(function(data) {
-            deferredInst.resolve(data);
-          }).error(function() {
-            // Load english locale file if not available
-            var url = buildUrl(options.prefix, 'en', value, options.suffix);
-            $http({
-              method: 'GET',
-              url: url
-            }).success(function(data) {
+          }).then(function(data) {
               deferredInst.resolve(data);
-            }).error(function() {
-              deferredInst.resolve({});
-            });
-          });
+            }, function() {
+              // Load english locale file if not available
+              var url = buildUrl(options.prefix, 'en', value, options.suffix);
+              $http({
+                method: 'GET',
+                url: url
+              }).then(function(data) {
+                deferredInst.resolve(data);
+              }, function() {
+                deferredInst.resolve({});
+              })
+            }
+          );
         });
 
         // Finally, create a single promise containing all the promises

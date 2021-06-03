@@ -60,7 +60,7 @@
               scope.nodes = null;
               scope.gsNode = null;
               var map;
-              gnGeoPublisher.getList().success(function(data) {
+              gnGeoPublisher.getList().then(function(data) {
                 if (data != null) {
                   scope.nodes = data;
                   scope.gsNode = data[0];
@@ -228,7 +228,7 @@
                 return gnGeoPublisher.publishNode(scope.gsNode.id,
                     scope.name,
                     scope.resource.title,
-                    scope.resource['abstract']).success(function(data) {
+                    scope.resource['abstract']).then(function(data) {
                   readResponse(data, 'publish');
                 }).error(function(data) {
                   scope.statusCode = data.description;
@@ -245,10 +245,10 @@
                   map.removeLayer(scope.layer);
                 }
                 return gnGeoPublisher.unpublishNode(scope.gsNode.id, scope.name)
-                    .success(function(data) {
+                    .then(function(data) {
                       scope.statusCode = data;
                       scope.isPublished = false;
-                    }).error(function(data) {
+                    }, function(data) {
                       scope.statusCode = data.description;
                       scope.isPublished = false;
                     });

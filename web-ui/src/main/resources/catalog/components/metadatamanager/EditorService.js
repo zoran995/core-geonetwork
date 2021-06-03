@@ -155,13 +155,13 @@
              {
                headers: {'Content-Type':
                  'application/x-www-form-urlencoded'}
-             }).success(function(data) {
+             }).then(function(data) {
 
                var snippet = $(cleanData(data));
                scope.refreshEditorForm(snippet);
                gnCurrentEdit.working = false;
                defer.resolve(snippet);
-             }).error(function(error) {
+             }, function(error) {
                setStatus({msg: 'saveMetadataError', saving: false});
                gnCurrentEdit.working = false;
                defer.reject(error);
@@ -236,7 +236,7 @@
              {
                headers: {'Content-Type':
                  'application/x-www-form-urlencoded'}
-             }).success(function(data) {
+             }).then(function(data) {
 
                 var snippet = $(cleanData(data));
                 if (refreshForm) {
@@ -247,7 +247,7 @@
                 }
                 gnCurrentEdit.working = false;
                 defer.resolve(snippet);
-              }).error(function(error) {
+              }, function(error) {
                 if (!silent) {
                   setStatus({msg: 'saveMetadataError', saving: false});
                 }
@@ -275,10 +275,10 @@
 
              $http.delete(
              '../api/records/' + gnCurrentEdit.id + '/editor'
-             ).success(function(data) {
+             ).then(function(data) {
                setStatus({msg: 'allChangesCanceled', saving: false});
                defer.resolve(data);
-             }).error(function(error) {
+             }, function(error) {
                setStatus({msg: 'cancelChangesError', saving: false});
                defer.reject(error);
              });
@@ -437,33 +437,33 @@
              $http.put(this.buildEditUrlPrefix('editor/elements') +
              '&displayAttributes=' + gnCurrentEdit.displayAttributes +
              '&ref=' + ref + '&name=' + name + attributeAction)
-              .success(function(data) {
-               // Append HTML snippet after current element - compile Angular
-               var target = $('#gn-el-' + insertRef);
-               var snippet = $(cleanData(data));
+              .then(function(data) {
+                // Append HTML snippet after current element - compile Angular
+                var target = $('#gn-el-' + insertRef);
+                var snippet = $(cleanData(data));
 
-               if (attribute) {
-                 target.replaceWith(snippet);
-               } else {
-                 // If the element was a add button
-                 // without any existing element, the
-                 // gn-extra-field indicating a not first field
-                 // was not set. After add, set the css class.
-                 if (target.hasClass('gn-add-field')) {
-                   target.addClass('gn-extra-field');
-                 }
-                 snippet.css('display', 'none');   // Hide
-                 target[position || 'after'](snippet); // Insert
-                 snippet.slideDown(duration, function() {});   // Slide
+                if (attribute) {
+                  target.replaceWith(snippet);
+                } else {
+                  // If the element was a add button
+                  // without any existing element, the
+                  // gn-extra-field indicating a not first field
+                  // was not set. After add, set the css class.
+                  if (target.hasClass('gn-add-field')) {
+                    target.addClass('gn-extra-field');
+                  }
+                  snippet.css('display', 'none');   // Hide
+                  target[position || 'after'](snippet); // Insert
+                  snippet.slideDown(duration, function() {});   // Slide
 
-                 // Adapt the add & move element
-                 checkAddControls(snippet);
-                 checkMoveControls(snippet);
-               }
-               $compile(snippet)(gnCurrentEdit.formScope);
-               defer.resolve(snippet);
+                  // Adapt the add & move element
+                  checkAddControls(snippet);
+                  checkMoveControls(snippet);
+                }
+                $compile(snippet)(gnCurrentEdit.formScope);
+                defer.resolve(snippet);
 
-             }).error(function(data) {
+             }, function(data) {
                defer.reject(data);
              });
 
@@ -476,7 +476,7 @@
              '&displayAttributes=' + gnCurrentEdit.displayAttributes +
              '&ref=' + ref +
              '&name=' + parent +
-             '&child=' + name).success(function(data) {
+             '&child=' + name).then(function(data) {
                // Append HTML snippet after current element - compile Angular
                var target = $('#gn-el-' + insertRef);
                var snippet = $(cleanData(data));
@@ -493,7 +493,7 @@
 
                $compile(snippet)(gnCurrentEdit.formScope);
                defer.resolve(snippet);
-             }).error(function(data) {
+             }, function(data) {
                defer.reject(data);
              });
              return defer.promise;
@@ -506,7 +506,7 @@
              '/editor/elements?ref=' + ref +
              '&displayAttributes=' + gnCurrentEdit.displayAttributes +
              '&parent=' + parent)
-              .success(function(data) {
+              .then(function(data) {
                // For a fieldset, domref is equal to ref.
                // For an input, it may be different because
                // the element to remove is the parent of the input
@@ -560,7 +560,7 @@
 
                // TODO: Take care of moving the + sign
                defer.resolve(data);
-             }).error(function(data) {
+             }, function(data) {
                defer.reject(data);
              });
              return defer.promise;
@@ -615,7 +615,7 @@
 
              $http.put(this.buildEditUrlPrefix('editor/elements/' + direction) +
              '&ref=' + ref)
-              .success(function(data) {
+              .then(function(data) {
                // Switch with previous element
                if (domelementToMove) {
                  var currentElement = $('#gn-el-' + domelementToMove);
@@ -630,7 +630,7 @@
                  swapMoveControls(currentElement, switchWithElement);
                }
                defer.resolve(data);
-             }).error(function(data) {
+             }, function(data) {
                defer.reject(data);
              });
              return defer.promise;
@@ -645,14 +645,13 @@
            },
            getRecord: function(uuid) {
              var defer = $q.defer();
-             $http.get('../api/records/' + uuid).
-             success(function(data) {
-               defer.resolve(data);
-             }).
-             error(function(data) {
-               //                TODO handle error
-               //                defer.reject(error);
-             });
+             $http.get('../api/records/' + uuid)
+               .then(function(data) {
+                 defer.resolve(data);
+               }, function(data) {
+                 //                TODO handle error
+                 //                defer.reject(error);
+               });
              return defer.promise;
            },
            /**

@@ -170,9 +170,9 @@
       var runService = function(service, params, scope) {
         return gnEditor.save(false, true)
             .then(function() {
-              gnHttp.callService(service, params).success(function() {
+              gnHttp.callService(service, params).then(function() {
                 refreshForm(scope);
-              }).error(function(error) {
+              }, function(error) {
                 $rootScope.$broadcast('StatusUpdated', {
                   title: $translate.instant('runServiceError'),
                   error: error,
@@ -222,7 +222,7 @@
               'Accept': 'application/json'
             }
           })
-              .success(function(data) {
+              .then(function(data) {
                 defer.resolve(data);
               });
           return defer.promise;

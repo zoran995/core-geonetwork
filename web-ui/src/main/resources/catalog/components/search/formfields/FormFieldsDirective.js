@@ -259,7 +259,7 @@
           link: function(scope, element, attrs) {
             var url = 'info?_content_type=json&type=users';
 
-            $http.get(url, {cache: true}).success(function(data) {
+            $http.get(url, {cache: true}).then(function(data) {
               scope.users = data !== 'null' ? data.users : null;
 
               // Select by default the first group.
@@ -299,37 +299,37 @@
             var setDefaultValue = attrs['setDefaultValue'] == 'false' ? false : true;
             scope.disabled = scope.disabled ? true : false;
 
-            $http.get(url, {cache: true}).
-                success(function(data) {
-                  //data-ng-if is not correctly updating groups.
-                  //So we do the filter here
-                  if (scope.excludeSpecialGroups) {
-                    scope.groups = [];
-                    angular.forEach(data, function(g) {
-                      if (g.id > 1) {
-                        scope.groups.push(g);
-                      }
-                    });
-                  } else {
-                    scope.groups = data;
-                  }
+            $http.get(url, {cache: true})
+              .then(function(data) {
+                //data-ng-if is not correctly updating groups.
+                //So we do the filter here
+                if (scope.excludeSpecialGroups) {
+                  scope.groups = [];
+                  angular.forEach(data, function(g) {
+                    if (g.id > 1) {
+                      scope.groups.push(g);
+                    }
+                  });
+                } else {
+                  scope.groups = data;
+                }
 
-                  // Select by default the first group.
-                  if (setDefaultValue && (angular.isUndefined(scope.ownerGroup) ||
-                    scope.ownerGroup === '' ||
-                    scope.ownerGroup === 'undefined' ||
-                    scope.ownerGroup === null) && data) {
-                    // Requires to be converted to string, otherwise
-                    // angularjs adds empty non valid option
-                    scope.ownerGroup = scope.groups[0].id + "";
-                  }
-                  if (optional) {
-                    scope.groups.unshift({
-                      id: 'undefined',
-                      name: ''
-                    });
-                  }
-                });
+                // Select by default the first group.
+                if (setDefaultValue && (angular.isUndefined(scope.ownerGroup) ||
+                  scope.ownerGroup === '' ||
+                  scope.ownerGroup === 'undefined' ||
+                  scope.ownerGroup === null) && data) {
+                  // Requires to be converted to string, otherwise
+                  // angularjs adds empty non valid option
+                  scope.ownerGroup = scope.groups[0].id + "";
+                }
+                if (optional) {
+                  scope.groups.unshift({
+                    id: 'undefined',
+                    name: ''
+                  });
+                }
+              });
           }
         };
       }])

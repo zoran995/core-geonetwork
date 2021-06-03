@@ -83,13 +83,13 @@
       $scope.sampleLoadRunning = false;
 
       function loadSchemas() {
-        $http.get('../api/standards').
-            success(function(data) {
-              $scope.schemas = data;
+        $http.get('../api/standards')
+          .then(function(data) {
+            $scope.schemas = data;
 
-              // Trigger load action according to route params
-              launchActions();
-            });
+            // Trigger load action according to route params
+            launchActions();
+          });
       }
 
       function launchActions() {
@@ -159,10 +159,10 @@
         $scope.tplLoadRunning = true;
         $http.put('../api/records/templates?schema=' +
             $scope.selectedSchemas.join('&schema=')
-        ).success(function(data) {
+        ).then(function(data) {
           $scope.loadTplReport = data;
           $scope.tplLoadRunning = false;
-        }).error(function(data) {
+        }, function(data) {
           $scope.tplLoadRunning = false;
         });
       };
@@ -171,10 +171,10 @@
         $scope.sampleLoadRunning = true;
         $http.put('../api/records/samples?schema=' +
             $scope.selectedSchemas.join('&schema=')
-        ).success(function(data) {
+        ).then(function(data) {
           $scope.loadReport = data;
           $scope.sampleLoadRunning = false;
-        }).error(function(data) {
+        }, function(data) {
           $scope.sampleLoadRunning = false;
         });
       };
@@ -197,14 +197,14 @@
        */
       loadFormatter = function() {
         $scope.formatters = [];
-        $http.get('md.formatter.list?_content_type=json').
-            success(function(data) {
-              if (data !== 'null') {
-                $scope.formatters = data.formatters; // TODO: check multiple
-              }
-            }).error(function(data) {
+        $http.get('md.formatter.list?_content_type=json')
+          .then(function(data) {
+            if (data !== 'null') {
+              $scope.formatters = data.formatters; // TODO: check multiple
+            }
+          }, function(data) {
               // TODO
-            });
+          });
       };
 
       /**
@@ -234,7 +234,7 @@
         if (f.schema) {
           url += '&schema=' + f.schema;
         }
-        $http.get(url).success(function(data) {
+        $http.get(url).then(function(data) {
           if (data !== 'null') {
             // Format files
             angular.forEach(data.file, function(file) {
@@ -256,7 +256,7 @@
             });
             $scope.selectedFile = $scope.formatterFiles[0];
           }
-        }).error(function(data) {
+        }, function(data) {
           // TODO
         });
       };
@@ -282,11 +282,10 @@
           url += '&schema=' + f.schema;
         }
         $http.get(url)
-            .success(function(data) {
+            .then(function(data) {
               $scope.formatterSelected = null;
               loadFormatter();
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('formatterRemovalError'),
                 error: data,
@@ -309,7 +308,7 @@
             method: 'POST',
             data: $.param(params),
             headers: {'Content-Type': 'application/x-www-form-urlencoded'}
-          }).success(function(fileContent) {
+          }).then(function(fileContent) {
             $scope.formatterFile = fileContent[0];
           });
         }

@@ -107,11 +107,11 @@
           });
 
           function loadTasks() {
-            return $http.get('../api/status/task', {cache: true}).
-            success(function(data) {
-              scope.tasks = data;
-              scope.getVisibleTasks();
-            });
+            return $http.get('../api/status/task', {cache: true})
+              .then(function(data) {
+                scope.tasks = data;
+                scope.getVisibleTasks();
+              });
           };
 
           scope.getVisibleTasks = function() {

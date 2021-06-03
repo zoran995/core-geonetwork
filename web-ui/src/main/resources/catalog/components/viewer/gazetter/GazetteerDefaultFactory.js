@@ -80,8 +80,7 @@
                   name_startsWith: query,
                   username: 'georchestra'
                 }
-              }).
-              success(function(response) {
+              }).then(function(response) {
                 var loc;
                 scope.results = [];
                 for (var i = 0; i < response.geonames.length; i++) {

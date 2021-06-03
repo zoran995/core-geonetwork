@@ -162,7 +162,7 @@
                  var params = {uuid: uuid};
 
                  gnHttp.callService(
-                     'subtemplate', params).success(function(xml) {
+                     'subtemplate', params).then(function(xml) {
                    if (usingXlink) {
                      snippets.push(gnEditorXMLService.
                      buildXMLForXlink(scope.schema, scope.elementName,

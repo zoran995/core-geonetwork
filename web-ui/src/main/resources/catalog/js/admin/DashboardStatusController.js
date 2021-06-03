@@ -78,15 +78,15 @@
       };
       $scope.toggleThreadContentionMonitoring = function() {
         $http.get('../api/site/threads/debugging/true/' +
-            $scope.threadStatus.threadContentionMonitoringEnabled).
-            success(function(data) {
+          $scope.threadStatus.threadContentionMonitoringEnabled)
+            .then(function(data) {
               $scope.threadStatus = data;
             });
       };
       $scope.toggleThreadCpuTime = function() {
         $http.get('../api/site/threads/debugging/false/' +
-            $scope.threadStatus.threadCpuTimeEnabled).
-            success(function(data) {
+          $scope.threadStatus.threadCpuTimeEnabled)
+            .then(function(data) {
               $scope.threadStatus = data;
             });
       };
@@ -96,7 +96,7 @@
           threadActivityEl.collapse('toggle');
         }
         $scope.threadInfoLoading = true;
-        $http.get('../api/site/threads/status').success(function(data) {
+        $http.get('../api/site/threads/status').then(function(data) {
           $scope.threadInfoLoading = false;
           $scope.threadStatus = data;
 
@@ -111,7 +111,7 @@
               $scope.openThreadActivity(true);
             }
           }, 2000);
-        }).error(function() {
+        }, function() {
           $scope.threadInfoLoading = false;
         });
       };
@@ -120,22 +120,22 @@
         $scope.threadStackTrace = 'Loading...';
         $('#stackTrace').modal('toggle');
         $http.get('../api/site/threads/trace/' +
-            thread.id).success(function(data) {
+            thread.id).then(function(data) {
           $scope.threadStackTrace = data.stackTrace;
         });
       };
-      $http.get('../../criticalhealthcheck').success(function(data) {
+      $http.get('../../criticalhealthcheck').then(function(data) {
         $scope.healthy = true;
         $scope.criticalhealthcheck = data;
-      }).error(function(data) {
+      }, function(data) {
         $scope.healthy = false;
         $scope.criticalhealthcheck = data;
       });
 
-      $http.get('../../warninghealthcheck').success(function(data) {
+      $http.get('../../warninghealthcheck').then(function(data) {
         $scope.nowarnings = true;
         $scope.warninghealthcheck = data;
-      }).error(function(data) {
+      }, function(data) {
         $scope.nowarnings = false;
         $scope.warninghealthcheck = data;
       });
@@ -153,7 +153,7 @@
           logActivityEl.collapse('toggle');
         }
         $scope.logInfoLoading = true;
-        $http.get('../api/site/logging/activity').success(function(data) {
+        $http.get('../api/site/logging/activity').then(function(data) {
           $scope.logInfoLoading = false;
           $scope.logActivity = data;
 
@@ -168,7 +168,7 @@
               $scope.openLogActivity(true);
             }
           }, 2000);
-        }).error(function() {
+        }, function() {
           $scope.logInfoLoading = false;
         });
       };

@@ -65,22 +65,22 @@
        */
       function loadCSWVirtual() {
         $scope.virtualCSWSelected = {};
-        $http.get('../api/csw/virtuals').
-            success(function(data) {
-              $scope.cswVirtual = data;
-            });
+        $http.get('../api/csw/virtuals')
+          .then(function(data) {
+            $scope.cswVirtual = data;
+          });
       }
 
 
       function loadFilterList() {
-        $http.get('../api/groups').
-            success(function(data) {
-              $scope.groupsFilter = data;
-            });
+        $http.get('../api/groups')
+          .then(function(data) {
+            $scope.groupsFilter = data;
+          });
       }
       function loadCategories() {
         $http.get('../api/tags').
-            success(function(data) {
+            then(function(data) {
               $scope.categories = data;
             });
       }
@@ -88,7 +88,7 @@
       $scope.selectVirtualCSW = function(v) {
         operation = 'updateservice';
         $http.get('../api/csw/virtuals/' + v.id)
-            .success(function(data) {
+            .then(function(data) {
               var params = [], formParams = ['abstract', 'title',
                 '_source', '_cat', 'any', '_groupPublished', 'keyword',
                 'denominator', 'type'];
@@ -109,7 +109,7 @@
               $timeout(function() {
                 $('#servicename').focus();
               }, 100);
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
       };

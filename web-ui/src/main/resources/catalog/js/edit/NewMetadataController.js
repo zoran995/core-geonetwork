@@ -351,11 +351,9 @@
         $scope.mdIdentifierTemplateSelected = {};
 
         $http.get('../api/identifiers')
-            .success(function(data) {
-              $scope.mdIdentifierTemplates = data;
-
-            });
-
+          .then(function(data) {
+            $scope.mdIdentifierTemplates = data;
+          });
       }
 
       loadMetadataIdentifierTemplates();

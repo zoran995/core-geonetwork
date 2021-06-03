@@ -129,7 +129,7 @@
         isPolling = true;
 
         $http.get('admin.harvester.list?onlyInfo=true&_content_type=json&id=' +
-            runningHarvesters.join('&id=')).success(
+            runningHarvesters.join('&id=')).then(
             function(data) {
               isPolling = false;
               if (data != 'null') {
@@ -155,7 +155,7 @@
 
                 setTimeout(pollHarvesterStatus, 5000);
               }
-            }).error(function(data) {
+            }, function(data) {
           isPolling = false;
         });
       };

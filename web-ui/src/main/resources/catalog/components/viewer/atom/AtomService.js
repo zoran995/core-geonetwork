@@ -63,7 +63,7 @@
             });
             feedsCache.put(url, {data: defer.promise,
               status: 'pending', deferred: defer});
-            feedPromise.success(function(responseData, status,
+            feedPromise.then(function(responseData, status,
                                          headers, config) {
                   var currentDefer = feedsCache.get(url).deferred;
                   try {
@@ -74,8 +74,7 @@
                     feedsCache.put(url, {data: e, status: 'fail'});
                     currentDefer.reject(e);
                   }
-                })
-                .error(function(data, status, headers, config) {
+                }, function(data, status, headers, config) {
                   var currentDefer = feedsCache.get(url).deferred;
                   feedsCache.put(url, {data: 'url_unavailable',
                     status: 'fail'});

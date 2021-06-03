@@ -414,7 +414,7 @@
               categoryId: type.id
             },
             cache: true
-          }).success(function(response) {
+          }).then(function(response) {
             var data = response.region;
 
             // Compute default name and add a
@@ -440,7 +440,7 @@
         loadList: function() {
           if (!listDefer) {
             listDefer = $q.defer();
-            $http.get('../api/regions/types').success(function(data) {
+            $http.get('../api/regions/types').then(function(data) {
               angular.forEach(data, function(value, key) {
                 if (value.id) {
                   var tokens = value.id.split('#'),

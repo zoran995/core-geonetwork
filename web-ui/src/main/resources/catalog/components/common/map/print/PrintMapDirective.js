@@ -96,7 +96,7 @@
      */
     var updatePrintConfig = function() {
       var http = $http.get(options.printConfigUrl);
-      http.success(function(data) {
+      http.then(function(data) {
 
         // default values:
         var layout = data.layouts[0];
@@ -276,7 +276,7 @@
       };
       var http = $http.post($scope.config.createURL + '?url=' +
           encodeURIComponent('../../pdf'), spec);
-      http.success(function(data) {
+      http.then(function(data) {
         $scope.printing = false;
         $scope.downloadUrl(data.getURL);
         //After standard print, download the pdf Legends
@@ -284,8 +284,7 @@
         for (var i = 0; i < pdfLegendsToDownload.length; i++) {
           $window.open(pdfLegendsToDownload[i]);
         }
-      });
-      http.error(function() {
+      }, function() {
         $scope.printing = false;
       });
     };

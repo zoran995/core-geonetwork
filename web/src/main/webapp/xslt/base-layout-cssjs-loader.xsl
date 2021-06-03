@@ -266,7 +266,7 @@
           })
 
           keycloak.init({ onLoad: '<xsl:value-of select="keycloakUtil:getInitOnLoad()"/>',
-          checkLoginIframe: false }).success(function(authenticated) {
+          checkLoginIframe: false }).then(function(authenticated) {
              $(window).load(function() {
               if (authenticated) {
                 if ($("#signinLink").length) {

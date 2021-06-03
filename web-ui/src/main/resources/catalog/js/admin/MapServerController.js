@@ -47,7 +47,7 @@
       function loadMapservers() {
         $scope.mapserverSelected = null;
         $http.get('../api/mapservers')
-            .success(function(data) {
+            .then(function(data) {
               $scope.mapservers = data;
             });
       }
@@ -85,14 +85,13 @@
             ($scope.isUpdate ? '/' +
             $scope.mapserverSelected.id : ''),
             $scope.mapserverSelected)
-            .success(function(data) {
+            .then(function(data) {
               loadMapservers();
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('mapserverUpdated'),
                 timeout: 2,
                 type: 'success'});
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('mapserverUpdateError'),
                 error: data,
@@ -121,10 +120,10 @@
           {
             headers: {'Content-Type': 'application/x-www-form-urlencoded'}
           })
-          .success(function(data) {
+          .then(function(data) {
             $scope.resetPassword = null;
             $('#passwordResetModal').modal('hide');
-          }).error(function(data) {
+          }, function(data) {
             // TODO
           });
 
@@ -132,10 +131,9 @@
       $scope.deleteMapServer = function() {
         $http.delete('../api/mapservers/' +
             $scope.mapserverSelected.id)
-            .success(function(data) {
+            .then(function(data) {
               loadMapservers();
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('mapserverDeleteError'),
                 error: data,

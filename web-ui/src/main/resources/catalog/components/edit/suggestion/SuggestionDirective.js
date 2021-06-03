@@ -50,20 +50,20 @@
              scope.load = function() {
                scope.loading = true;
                scope.suggestions = [];
-               gnSuggestion.load(scope.$parent.lang || 'eng').
-               success(function(data) {
-                 scope.loading = false;
-                 if (data && !angular.isString(data)) {
-                   scope.suggestions = data;
-                   angular.forEach(scope.suggestions, function(sugg) {
-                     var value = sugg.name;
-                     sugg.name = $interpolate(value)(scope.$parent);
-                   });
-                 }
-                 else {
-                   scope.suggestions = [];
-                 }
-               }).error(function(error) {
+               gnSuggestion.load(scope.$parent.lang || 'eng')
+                 .then(function(data) {
+                   scope.loading = false;
+                   if (data && !angular.isString(data)) {
+                     scope.suggestions = data;
+                     angular.forEach(scope.suggestions, function(sugg) {
+                       var value = sugg.name;
+                       sugg.name = $interpolate(value)(scope.$parent);
+                     });
+                   }
+                   else {
+                     scope.suggestions = [];
+                   }
+               }, function(error) {
                  scope.loading = false;
                  $rootScope.$broadcast('StatusUpdated', {
                    title: $translate.instant('suggestionListError'),
@@ -109,8 +109,8 @@
           link: function(scope, element, attrs) {
             scope.sugg = undefined;
             scope.gnSuggestion = gnSuggestion;
-            gnSuggestion.load(scope.$parent.lang || 'eng').
-              success(function(data) {
+            gnSuggestion.load(scope.$parent.lang || 'eng')
+              .then(function(data) {
                 if (data && !angular.isString(data)) {
                   scope.suggestions = data;
                   for(var i = 0; i < data.length; i ++) {

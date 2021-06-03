@@ -187,19 +187,18 @@
                     thesaurus: thesaurus
                   })
                   );
-              $http.get(url, { cache: true }).
-                  success(function(data, status) {
-                    if (data != null && data.narrower) {
-                      defer.resolve(data);
-                    } else {
-                      // not a top concept
-                      defer.reject();
-                    }
-                  }).
-                  error(function(data, status) {
-                    //                TODO handle error
+              $http.get(url, { cache: true })
+                .then(function(data, status) {
+                  if (data != null && data.narrower) {
+                    defer.resolve(data);
+                  } else {
+                    // not a top concept
                     defer.reject();
-                  });
+                  }
+                }, function(data, status) {
+                  //                TODO handle error
+                  defer.reject();
+                });
               return defer.promise;
             };
 
@@ -214,14 +213,13 @@
                         keywordUris.join(',') : keywordUris || ''
                   })
                   );
-              $http.get(url, { cache: true }).
-                  success(function(data, status) {
-                    defer.resolve(data);
-                  }).
-                  error(function(data, status) {
-                    //                TODO handle error
-                    //                defer.reject(error);
-                  });
+              $http.get(url, { cache: true })
+                .then(function(data, status) {
+                  defer.resolve(data);
+                }, function(data, status) {
+                  //                TODO handle error
+                  //                defer.reject(error);
+                });
               return defer.promise;
             };
 
@@ -313,17 +311,16 @@
                 '../api/registries/vocabularies/keyword',
                     gnUrlUtils.toKeyValue(params)
                     );
-                $http.get(url, { cache: true }).
-                    success(function(data, status) {
-                      // TODO: could be a global constant ?
-                      var xmlDeclaration =
+                $http.get(url, { cache: true })
+                  .then(function(data, status) {
+                    // TODO: could be a global constant ?
+                    var xmlDeclaration =
                           '<?xml version="1.0" encoding="UTF-8"?>';
-                      defer.resolve(data.replace(xmlDeclaration, ''));
-                    }).
-                    error(function(data, status) {
-                      //                TODO handle error
-                      //                defer.reject(error);
-                    });
+                    defer.resolve(data.replace(xmlDeclaration, ''));
+                  }, function(data, status) {
+                    //                TODO handle error
+                    //                defer.reject(error);
+                  });
                 return defer.promise;
               },
               /**
@@ -334,7 +331,7 @@
                 $http.get('thesaurus?_content_type=json&' +
                     'element=gmd:descriptiveKeywords&schema=' +
                     (schema || 'iso19139'), { cache: true }).
-                    success(function(data, status) {
+                    then(function(data, status) {
                       var listOfThesaurus = [];
                       //converted and non-converted value
                       // i.e. fra and fre
@@ -343,8 +340,7 @@
                         listOfThesaurus.push(new Thesaurus(k,uiLangs));
                       });
                       defer.resolve(listOfThesaurus);
-                    }).
-                    error(function(data, status) {
+                    }, function(data, status) {
                       //                TODO handle error
                       //                defer.reject(error);
                     });
@@ -365,10 +361,9 @@
                 var url = getKeywordsSearchUrl(filter,
                     thesaurus, lang, max, typeSearch,allLangs);
                 $http.get(url, { cache: true }).
-                    success(function(data, status) {
+                    then(function(data, status) {
                       defer.resolve(parseKeywordsResponse(data));
-                    }).
-                    error(function(data, status) {
+                    }, function(data, status) {
                       //                TODO handle error
                       //                defer.reject(error);
                     });

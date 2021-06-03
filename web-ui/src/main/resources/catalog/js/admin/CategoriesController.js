@@ -82,21 +82,21 @@
        */
       $scope.saveCategory = function() {
         $http.put('../api/tags/' + $scope.categorySelected.id,
-            $scope.categorySelected).success(function(data) {
+            $scope.categorySelected).then(function(data) {
           $scope.unselectCategory();
           loadCategories();
           $rootScope.$broadcast('StatusUpdated', {
             msg: $translate.instant('categoryUpdated'),
             timeout: 2,
             type: 'success'});
-        })
-            .error(function(data) {
-              $rootScope.$broadcast('StatusUpdated', {
-                title: $translate.instant('categoryUpdateError'),
-                error: data,
-                timeout: 0,
-                type: 'danger'});
-            });
+        }, function(data) {
+          $rootScope.$broadcast('StatusUpdated', {
+            title: $translate.instant('categoryUpdateError'),
+            error: data,
+            timeout: 0,
+            type: 'danger'
+          });
+        });
       };
 
       $scope.addCategory = function() {
@@ -118,7 +118,7 @@
       };
 
       function loadCategories() {
-        $http.get('../api/tags').success(function(data) {
+        $http.get('../api/tags').then(function(data) {
           $scope.categories = data;
         });
       }

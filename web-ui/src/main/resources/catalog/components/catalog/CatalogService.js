@@ -204,7 +204,7 @@
 
           return this.copy(id, groupId, withFullPrivileges,
               isTemplate, isChild, metadataUuid, hasCategoryOfSource)
-              .success(function(id) {
+              .then(function(id) {
                 var path = '/metadata/' + id;
                 if (tab) {
                   path += '/tab/' + tab;

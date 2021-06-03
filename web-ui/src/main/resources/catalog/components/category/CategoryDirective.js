@@ -46,16 +46,16 @@
         templateUrl: '../../catalog/components/category/partials/' +
             'category.html',
         link: function(scope, element, attrs) {
-          $http.get('../api/tags', {cache: true}).
-              success(function(data) {
-                scope.categories = data;
-              });
+          $http.get('../api/tags', {cache: true})
+            .then(function(data) {
+              scope.categories = data;
+            });
 
           scope.sortByLabel = function(c) {
             return c.label[scope.lang];
           };
         }
-        
+
       };
     }]);
 
@@ -72,10 +72,10 @@
         link: function(scope, element, attrs) {
           scope.report = null;
 
-          $http.get('../api/tags', {cache: true}).
-              success(function(data) {
-                scope.categories = data;
-              });
+          $http.get('../api/tags', {cache: true})
+            .then(function(data) {
+              scope.categories = data;
+            });
 
           scope.save = function(replace) {
             scope.report = null;
@@ -91,7 +91,7 @@
               }
             });
             $http.put(url + params.join('&id='))
-                .success(function(data) {
+                .then(function(data) {
                   scope.processReport = data;
 
                   gnUtilityService.openModal({
@@ -105,7 +105,7 @@
 
                   scope.report = data;
                   defer.resolve(data);
-                }).error(function(data) {
+                }, function(data) {
                   scope.processReport = data;
 
                   gnUtilityService.openModal({

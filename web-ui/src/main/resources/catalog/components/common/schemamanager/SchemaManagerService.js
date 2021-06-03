@@ -82,12 +82,12 @@
              if (fromCache) {
                defer.resolve(fromCache);
              } else {
-               $http.get('../api/standards', { cache: false }).
-               success(function(data) {
-                 var nss = extractNamespaces(data);
-                 infoCache.put('schemas', nss);
-                 defer.resolve(nss);
-               });
+               $http.get('../api/standards', { cache: false })
+                 .then(function(data) {
+                   var nss = extractNamespaces(data);
+                   infoCache.put('schemas', nss);
+                   defer.resolve(nss);
+                 });
              }
              return defer.promise;
            },
@@ -103,7 +103,7 @@
                var url = '../api/standards/' + info[0] +
                  '/codelists/' + info[1] + '/details';
                $http.get(url + (displayIf ? '?displayIf=' + encodeURIComponent(displayIf) : ''))
-               .success(function(data) {
+               .then(function(data) {
                  infoCache.put(cacheKey, data);
                  defer.resolve(data);
                });
@@ -133,7 +133,7 @@
                  '&xpath=' + (info[3] || '') +
                  '&isoType=' + (info[4] || '') +
                  '&displayIf=' + (encodeURIComponent(displayIf) || '')).
-                 success(function(data) {
+                 then(function(data) {
                    infoCache.put(cacheKey, data);
                    defer.resolve(data);
                  });

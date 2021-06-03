@@ -122,18 +122,18 @@
         mode: 'prefetch',
         promise: (function() {
           var defer = $q.defer();
-          $http.get('../api/tags', {cache: true}).
-              success(function(data) {
-                var res = [];
-                for (var i = 0; i < data.length; i++) {
-                  res.push({
-                    id: data[i].name,
-                    name: data[i].label[$scope.lang]
-                  });
-                }
-                res = orderByFilter(res,'name',false);
-                defer.resolve(res);
-              });
+          $http.get('../api/tags', {cache: true})
+            .then(function(data) {
+              var res = [];
+              for (var i = 0; i < data.length; i++) {
+                res.push({
+                  id: data[i].name,
+                  name: data[i].label[$scope.lang]
+                });
+              }
+              res = orderByFilter(res,'name',false);
+              defer.resolve(res);
+            });
           return defer.promise;
         })()
       };
@@ -142,17 +142,17 @@
         mode: 'prefetch',
         promise: (function() {
           var defer = $q.defer();
-          $http.get('../api/sources', {cache: true}).
-              success(function(a) {
-                var res = [];
-                for (var i = 0; i < a.length; i++) {
-                  res.push({
-                    id: a[i].id,
-                    name: a[i].name
-                  });
-                }
-                defer.resolve(res);
-              });
+          $http.get('../api/sources', {cache: true})
+            .then(function(a) {
+              var res = [];
+              for (var i = 0; i < a.length; i++) {
+                res.push({
+                  id: a[i].id,
+                  name: a[i].name
+                });
+              }
+              defer.resolve(res);
+            });
           return defer.promise;
         })()
       };

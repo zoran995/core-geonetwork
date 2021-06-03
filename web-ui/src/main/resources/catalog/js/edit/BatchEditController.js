@@ -86,7 +86,7 @@
               $scope.selectedStandards = [];
               $scope.selectedRecords = [];
               $http.get('../api/selections/be101').
-                  success(function(uuids) {
+                  then(function(uuids) {
                     $scope.selectedRecordsCount = uuids.length;
                     if (uuids.length > 0) {
                       $http.get('q?_content_type=json&_isTemplate=y or n or s&' +
@@ -138,7 +138,7 @@
       // Get current selection which returns the list of uuids.
       // Then search those records.
       $scope.searchSelection = function(params) {
-        $http.get('../api/selections/be101').success(function(uuids) {
+        $http.get('../api/selections/be101').then(function(uuids) {
           $scope.searchObj.params = angular.extend({
             _uuid: uuids.join(' or ')
           },
@@ -419,9 +419,9 @@
           });
         return $http.put(url,
             params
-        ).success(function(data) {
+        ).then(function(data) {
           $scope.processReport = data;
-        }).error(function(response) {
+        }, function(response) {
           $scope.processReport = response.data;
         });
       };
@@ -430,10 +430,10 @@
 
       function init() {
         $http.get('../api/standards/batchconfiguration').
-            success(function(data) {
+            then(function(data) {
               $scope.fieldConfig = data;
               gnSchemaManagerService.getNamespaces();
-            }).error(function(response) {
+            }, function(response) {
               console.warn(response);
             });
       }

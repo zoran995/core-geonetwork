@@ -149,13 +149,12 @@
            $scope.userInfo.email = $scope.userInfo.username;
 
            return $http.put('../api/0.1/user/actions/register', $scope.userInfo)
-           .success(function(data) {
+           .then(function(data) {
              $rootScope.$broadcast('StatusUpdated', {
                title: data,
                timeout: 0
              });
-           })
-           .error(function(data) {
+           }, function(data) {
              $rootScope.$broadcast('StatusUpdated', {
                title: data,
                timeout: 0,
@@ -169,19 +168,18 @@
            $http.get('../api/0.1/user/' +
            $scope.usernameToRemind +
                         '/actions/forgot-password')
-            .success(function(data) {
+            .then(function(data) {
              $scope.sendPassword = false;
              $rootScope.$broadcast('StatusUpdated', {
                title: data,
                timeout: 0
              });
              $scope.usernameToRemind = null;
-           })
-            .error(function(data) {
-             $rootScope.$broadcast('StatusUpdated', {
-               title: data,
-               timeout: 0,
-               type: 'danger'});
+           }, function(data) {
+              $rootScope.$broadcast('StatusUpdated', {
+                title: data,
+                timeout: 0,
+                type: 'danger'});
            });
          };
 
@@ -193,25 +191,24 @@
              password: $scope.password,
              changeKey: $scope.changeKey
            })
-            .success(function(data) {
+            .then(function(data) {
              $rootScope.$broadcast('StatusUpdated', {
                title: data,
                timeout: 0
              });
-           })
-            .error(function(data) {
-             $rootScope.$broadcast('StatusUpdated', {
-               title: data,
-               timeout: 0,
-               type: 'danger'});
+           }, function(data) {
+              $rootScope.$broadcast('StatusUpdated', {
+                title: data,
+                timeout: 0,
+                type: 'danger'});
            });
          };
 
          $scope.nodeChangeRedirect = function(redirectTo) {
            $http.get('../../signout')
-           .success(function(data) {
-                  window.location.href = redirectTo;
-           });
+             .then(function(data) {
+               window.location.href = redirectTo;
+             });
          };
 
          initForm();

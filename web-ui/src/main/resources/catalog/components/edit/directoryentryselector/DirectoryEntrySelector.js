@@ -280,7 +280,7 @@
                      '../api/registries/entries/' + uuid, {
                        params: params
                      })
-                     .success(function(xml) {
+                     .then(function(xml) {
                        if (usingXlink) {
                          snippets.push(gnEditorXMLService.
                          buildXMLForXlink(scope.schema,

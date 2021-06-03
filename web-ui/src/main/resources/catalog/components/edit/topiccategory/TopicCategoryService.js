@@ -125,12 +125,11 @@
               getTopicCategories: function() {
                 var defer = $q.defer();
                 var url = getTopicCategoriesSearchUrl();
-                $http.get(url, { cache: true }).
-                success(function(data) {
-                  defer.resolve(parseTopicCategoriesResponse(data));
-                }).
-                error(function(data, status) {
-                });
+                $http.get(url, { cache: true })
+                  .then(function(data) {
+                    defer.resolve(parseTopicCategoriesResponse(data));
+                  }, function(data, status) {
+                  });
                 return defer.promise;
               },
 

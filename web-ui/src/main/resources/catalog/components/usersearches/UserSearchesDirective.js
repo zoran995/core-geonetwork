@@ -237,7 +237,7 @@
           }
 
           function loadUserGroup () {
-            $http.get('../api/users/' + userIdForGroups + '/groups').success(function (data) {
+            $http.get('../api/users/' + userIdForGroups + '/groups').then(function (data) {
               var choices = [];
 
               // Remove internal groups
@@ -266,7 +266,7 @@
                   scope.userSearch.groups.join(",");
               }
               scope.userSearchGroups.groups = searchGroup;
-            }).error(function (data) {
+            }, function (data) {
               // TODO
             });
           }
@@ -408,108 +408,108 @@
 
           scope.tableEl = element;
 
-          $http.get('../api/groups').
-          success(function(data) {
-            scope.groups = data;
-            scope.bsTableControl = {
-              options: {
-                locale: 'en',
-                url: '../api/usersearches/allpaginated',
-                responseHandler: function (result) {
-                  scope.userSearches = angular.copy(result.rows);
+          $http.get('../api/groups')
+            .then(function(data) {
+              scope.groups = data;
+              scope.bsTableControl = {
+                options: {
+                  locale: 'en',
+                  url: '../api/usersearches/allpaginated',
+                  responseHandler: function (result) {
+                    scope.userSearches = angular.copy(result.rows);
 
-                  // Calculate the label to display
-                  angular.forEach(result.rows, function(search) {
-                    search.label = search.names[scope.lang] ||
-                      search.names['eng'] || $filter('translate')('userSearchNameMissing');
-                  });
+                    // Calculate the label to display
+                    angular.forEach(result.rows, function(search) {
+                      search.label = search.names[scope.lang] ||
+                        search.names['eng'] || $filter('translate')('userSearchNameMissing');
+                    });
 
-                  return result;
-                },
-                rowStyle: function (row, index) {
-                  return { classes: 'none' };
-                },
-                onPostBody: function (data) {
-                  $compile(scope.tableEl.contents())(scope);
-                  return true;
-                },
-                cache: false,
-                striped: true,
-                sidePagination: 'server',
-                pagination: true,
-                pageSize: scope.pageSize,
-                pageList: [5, 10, 50, 100, 200],
-                search: true,
-                minimumCountColumns: 2,
-                clickToSelect: false,
-                columns: [ {
-                  field: 'label',
-                  title: $filter('translate')('userSearchTblSearchName'),
-                  valign: 'bottom',
-                  sortable: false,
-                  formatter: function(value, row) {
-                    return '<span class="fa '
-                      + (row.featuredType !== '' ? 'fa-star': '')
-                      + ' fa-fw" title="' + $filter('translate')('featuredsearch')
-                      + '"></span>' + row.label;
-                  }
-                }, {
-                  field: 'creator',
-                  title: $filter('translate')('userSearchTblCreator'),
-                  valign: 'middle',
-                  sortable: false
-                }, {
-                  field: 'creationDate',
-                  title:  $filter('translate')('userSearchTblCreationDate'),
-                  align: 'center',
-                  valign: 'middle',
-                  sortable: false
-                }, {
-                  field: 'groups',
-                  title: $filter('translate')('userSearchTblGroups'),
-                  valign: 'middle',
-                  sortable: false,
-                  formatter: function(value, row) {
-                    var groupNames = [];
+                    return result;
+                  },
+                  rowStyle: function (row, index) {
+                    return { classes: 'none' };
+                  },
+                  onPostBody: function (data) {
+                    $compile(scope.tableEl.contents())(scope);
+                    return true;
+                  },
+                  cache: false,
+                  striped: true,
+                  sidePagination: 'server',
+                  pagination: true,
+                  pageSize: scope.pageSize,
+                  pageList: [5, 10, 50, 100, 200],
+                  search: true,
+                  minimumCountColumns: 2,
+                  clickToSelect: false,
+                  columns: [ {
+                    field: 'label',
+                    title: $filter('translate')('userSearchTblSearchName'),
+                    valign: 'bottom',
+                    sortable: false,
+                    formatter: function(value, row) {
+                      return '<span class="fa '
+                        + (row.featuredType !== '' ? 'fa-star': '')
+                        + ' fa-fw" title="' + $filter('translate')('featuredsearch')
+                        + '"></span>' + row.label;
+                    }
+                  }, {
+                    field: 'creator',
+                    title: $filter('translate')('userSearchTblCreator'),
+                    valign: 'middle',
+                    sortable: false
+                  }, {
+                    field: 'creationDate',
+                    title:  $filter('translate')('userSearchTblCreationDate'),
+                    align: 'center',
+                    valign: 'middle',
+                    sortable: false
+                  }, {
+                    field: 'groups',
+                    title: $filter('translate')('userSearchTblGroups'),
+                    valign: 'middle',
+                    sortable: false,
+                    formatter: function(value, row) {
+                      var groupNames = [];
 
-                    if (angular.isArray(value)) {
-                      for(var i = 0; i < value.length; i++) {
-                        var groupId = value[i];
+                      if (angular.isArray(value)) {
+                        for(var i = 0; i < value.length; i++) {
+                          var groupId = value[i];
 
-                        var group = scope.groups.filter(function(group) {
-                          return group.id === groupId;
-                        });
+                          var group = scope.groups.filter(function(group) {
+                            return group.id === groupId;
+                          });
 
-                        if (group) {
-                          groupNames.push(group[0].label[scope.lang]);
+                          if (group) {
+                            groupNames.push(group[0].label[scope.lang]);
+                          }
                         }
                       }
+
+                      return groupNames.join(",");
                     }
+                  }, {
+                    title: '',
+                    width: 75,
+                    formatter: function(value, row, index) {
+                      return '<div class="btn-group pull-right" role="group">' +
+                        '  <a class="btn btn-default btn-xs" data-ng-click="editUserSearch('+ row.id + ')">' +
+                        '    <span class="fa fa-pencil"></span>' +
+                        '  </a>' +
+                        '  <a class="btn btn-default btn-xs" data-gn-confirm-click="{{\'deleteUserSearchConfirm\' | translate }}"  ' +
+                        'title="{{\'delete\' | translate}}" ' +
+                        'data-gn-click-and-spin="removeUserSearch(' + row.id + ' )">' +
+                        '    <span class="fa fa-times text-danger"></span>' +
+                        '  </a>' +
+                        '</div>';
+                    }
+                  }]
+                }
+              };
 
-                    return groupNames.join(",");
-                  }
-                }, {
-                  title: '',
-                  width: 75,
-                  formatter: function(value, row, index) {
-                    return '<div class="btn-group pull-right" role="group">' +
-                      '  <a class="btn btn-default btn-xs" data-ng-click="editUserSearch('+ row.id + ')">' +
-                      '    <span class="fa fa-pencil"></span>' +
-                      '  </a>' +
-                      '  <a class="btn btn-default btn-xs" data-gn-confirm-click="{{\'deleteUserSearchConfirm\' | translate }}"  ' +
-                      'title="{{\'delete\' | translate}}" ' +
-                      'data-gn-click-and-spin="removeUserSearch(' + row.id + ' )">' +
-                      '    <span class="fa fa-times text-danger"></span>' +
-                      '  </a>' +
-                      '</div>';
-                  }
-                }]
-              }
-            };
-
-          }).error(function(data) {
-            // TODO
-          });
+            }, function(data) {
+              // TODO
+            });
 
           var findUserSeachById = function(userSearches, searchId) {
             var search = _.find(userSearches, function (search) {

@@ -88,7 +88,7 @@
           url += '?group=' + $scope.user.groupsWithUserAdmin.join('&group=');
         }
         $http.get(url)
-            .success(function(data) {
+            .then(function(data) {
               $scope.sources = data;
               filterSources();
               $scope.isNew = false;
@@ -99,7 +99,7 @@
         $scope.uiConfiguration = undefined;
         $scope.uiConfigurationId = '';
         $http.get('../api/ui')
-          .success(function(data) {
+          .then(function(data) {
             $scope.uiConfigurations = [{id: ''}];
             for (var i = 0; i < data.length; i ++) {
               $scope.uiConfigurations.push({
@@ -144,42 +144,40 @@
           $scope.isNew ? '' : $scope.source.uuid);
         $http.put(url,
                   $scope.source)
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('sourceUpdated'),
                 timeout: 2,
                 type: 'success'});
 
               loadSources();
-            })
-            .error(function(data) {
-                  $rootScope.$broadcast('StatusUpdated', {
-                    title: $translate.instant('sourceUpdateError'),
-                    error: data,
-                    timeout: 0,
-                    type: 'danger'});
-                });
+            }, function(data) {
+              $rootScope.$broadcast('StatusUpdated', {
+                title: $translate.instant('sourceUpdateError'),
+                error: data,
+                timeout: 0,
+                type: 'danger'});
+            });
       };
 
 
 
       $scope.removeSource = function() {
         $http.delete('../api/sources/' + $scope.source.uuid)
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('sourceRemoved'),
                 timeout: 2,
                 type: 'success'});
 
               loadSources();
-            })
-            .error(function(data) {
-                  $rootScope.$broadcast('StatusUpdated', {
-                    title: $translate.instant('sourceRemovedError'),
-                    error: data,
-                    timeout: 0,
-                    type: 'danger'});
-                });
+            }, function(data) {
+              $rootScope.$broadcast('StatusUpdated', {
+                title: $translate.instant('sourceRemovedError'),
+                error: data,
+                timeout: 0,
+                type: 'danger'});
+            });
       };
 
 

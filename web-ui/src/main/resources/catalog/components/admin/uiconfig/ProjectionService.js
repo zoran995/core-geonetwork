@@ -35,9 +35,9 @@
   var EPSG_REGEX = new RegExp('^EPSG:\\d{4,6}$');
 
   module.provider('gnProjService', function() {
-    this.$get = ['$http', '$q', '$translate', 'gnUrlUtils', 
+    this.$get = ['$http', '$q', '$translate', 'gnUrlUtils',
      function($http, $q, $translate, gnUrlUtils) {
-      
+
       var buildRestUrl = function(searchTerm) {
         // Add GET query parameters to serviceUrl
         if (searchTerm.toUpperCase().startsWith('EPSG:')) {
@@ -90,7 +90,7 @@
           }
           // transform world extent to projected extent
           extent = ol.proj.transformExtent(worldExtent, EPSG_LL_WGS84, code, 8);
-        } 
+        }
 
         return {
           label: firstResult.name,
@@ -108,7 +108,7 @@
             // Get API service name without http(s) prefix for display purposes
             return {
               value: SERVICE_REST_URL.substr(SERVICE_REST_URL.indexOf('://') + 3)
-            } 
+            }
           },
 
           isDefaultProjection: function(code) {
@@ -121,7 +121,7 @@
         },
 
         getProjectionSettings: function(searchTerm) {
-          var defer = $q.defer();          
+          var defer = $q.defer();
           var url = buildRestUrl(searchTerm);
 
           // send request and decode result
@@ -130,15 +130,14 @@
               cache: true,
               timeout: REQUEST_TIMEOUT
             })
-              .success(function(data) {
+              .then(function(data) {
                 try {
                   defer.resolve(parseProjDef(data));
                 } catch (e) {
                   console.error(e);
                   defer.reject($translate.instant('failedToParseProjDefinition'));
                 }
-              })
-              .error(function(data, status) {
+              }, function(data, status) {
                 defer.reject(
                 $translate.instant(
                   status === 401 ? 'checkProjectionUrlUnauthorized' : 'checkProjectionUrl',

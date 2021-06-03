@@ -107,12 +107,12 @@
 
         $http.put('../api/site/info/staging/' +
             $scope.systemInfo.stagingProfile)
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('profileUpdated'),
                 timeout: 2,
                 type: 'success'});
-            }).error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('profileUpdatedFailed'),
                 timeout: 2,
@@ -134,18 +134,18 @@
       function loadSettings() {
 
         $http.get('../api/site/info/build')
-            .success(function(data) {
+            .then(function(data) {
               $scope.systemInfo = data;
             });
 
         // load log files
         $http.get('../api/site/logging')
-            .success(function(data) {
+            .then(function(data) {
               $scope.logfiles = data;
             });
 
         $http.get('../api/site/settings/details')
-            .success(function(data) {
+            .then(function(data) {
 
               var sectionsLevel1 = [];
               var sectionsLevel2 = [];
@@ -200,7 +200,7 @@
                   }, 900);
                 }
               }
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
         loadUiConfigurations();
@@ -213,7 +213,7 @@
         $scope.uiConfigurationId = '';
         $scope.uiConfigurationIdIsValid = false;
         $http.get('../api/ui')
-          .success(function(data) {
+          .then(function(data) {
             for (var i = 0; i < data.length; i ++) {
               data[i].configuration == angular.toJson(data[i].configuration);
 
@@ -284,7 +284,7 @@
       };
 
       function loadUsers() {
-        $http.get('../api/users').success(function(data) {
+        $http.get('../api/users').then(function(data) {
           $scope.systemUsers = data;
         });
       }
@@ -317,7 +317,7 @@
               headers: {'Content-Type':
                     'application/x-www-form-urlencoded'}
             })
-            .success(function(data) {
+            .then(function(data) {
               $(".gn-no-setting" ).attr("disabled", false);
 
 
@@ -327,8 +327,7 @@
                 type: 'success'});
 
               $scope.loadCatalogInfo();
-            })
-            .error(function(data) {
+            }, function(data) {
               $(".gn-no-setting" ).attr("disabled", false);
 
               $rootScope.$broadcast('StatusUpdated', {
@@ -479,12 +478,12 @@
        * Execute Atom feed harvester
        */
       $scope.executeAtomHarvester = function() {
-        return $http.get('atomharvester?_content_type=json').success(function(data) {
+        return $http.get('atomharvester?_content_type=json').then(function(data) {
           $scope.loadTplReport = data;
 
           $('#atomHarvesterModal').modal();
 
-        }).error(function(data) {
+        }, function(data) {
           $scope.loadTplReport = data;
 
           $('#atomHarvesterModal').modal();

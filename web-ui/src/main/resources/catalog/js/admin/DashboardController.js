@@ -128,10 +128,10 @@
         }
       });
 
-      $http.get('../api/site/info').
-          success(function(data) {
-            $scope.info = data;
-          });
+      $http.get('../api/site/info')
+        .then(function(data) {
+          $scope.info = data;
+        });
 
     }]);
 

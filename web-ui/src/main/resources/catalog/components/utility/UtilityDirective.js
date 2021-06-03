@@ -68,7 +68,7 @@
               'http%3A%2F%2Fwww.naturalearthdata.com%2Fne_admin%23Country',
               {}, {
                 cache: true
-              }).success(function(response) {
+              }).then(function(response) {
               var data = response.region;
 
               // Compute default name and add a
@@ -469,7 +469,7 @@
           element.on('focus', function() {
             $http.get('../api/isolanguages', {}, {
               cache: true
-            }).success(function(data) {
+            }).then(function(data) {
               // Compute default name and add a
               // tokens element which is used for filter
               angular.forEach(data, function(lang) {

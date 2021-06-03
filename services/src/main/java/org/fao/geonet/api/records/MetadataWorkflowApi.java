@@ -85,8 +85,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
-
-import com.sun.istack.NotNull;
+//import org.jetbrains.annotations.NotNull;
+// import com.sun.istack.NotNull;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -715,7 +715,7 @@ public class MetadataWorkflowApi {
      * Build a list of status with additional information about users (author and
      * owner of the status change).
      */
-    @NotNull
+    //@NotNull
     private List<MetadataStatusResponse> buildMetadataStatusResponses(List<MetadataStatus> listOfStatus,
                                                                       boolean details, String language) {
         List<MetadataStatusResponse> response = new ArrayList<>();

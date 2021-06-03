@@ -673,7 +673,7 @@ goog.require('gn_alert');
         // TODO: Add INSPIRE, harvester, ... information
         var catInfo = promiseStart.then(function(value) {
           return $http.get('../api/site').
-              success(function(data, status) {
+              then(function(data, status) {
                 $scope.info = data;
                 // Add the last time catalog info where updated.
                 // That could be useful to append to catalog image URL
@@ -681,8 +681,7 @@ goog.require('gn_alert');
                 // reloaded.
                 $scope.info['system/site/lastUpdate'] = new Date().getTime();
                 $scope.initialized = true;
-              }).
-              error(function(data, status, headers, config) {
+              }, function(data, status, headers, config) {
                 $rootScope.$broadcast('StatusUpdated',
                    {
                      title: $translate.instant('somethingWrong'),
@@ -751,8 +750,8 @@ goog.require('gn_alert');
         // append a random number to avoid caching in IE11
         var userLogin = catInfo.then(function(value) {
           return $http.get('../api/me?_random=' +
-            Math.floor(Math.random() * 10000)).
-            success(function(me, status) {
+            Math.floor(Math.random() * 10000))
+            .then(function(me, status) {
               if (angular.isObject(me)) {
 
                 me['isAdmin'] = function(groupId) {
@@ -827,8 +826,7 @@ goog.require('gn_alert');
         });
       };
       $http.get('../../warninghealthcheck')
-        .success(healthCheckStatus)
-        .error(healthCheckStatus);
+        .then(healthCheckStatus, healthCheckStatus);
     }]);
 
 })();

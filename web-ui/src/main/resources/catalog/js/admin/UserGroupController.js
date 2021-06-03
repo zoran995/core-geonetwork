@@ -123,7 +123,7 @@
       $http.defaults.headers.get['Pragma'] = 'no-cache';
 
       $http.get('../api/tags').
-          success(function(data) {
+          then(function(data) {
             var nullTag = {id: null, name: '', label: {}};
             nullTag.label[$scope.lang] = '';
             $scope.categories = [nullTag].concat(data);
@@ -137,13 +137,13 @@
 
 
         $http.get('../api/groups' + profile).
-            success(function(data) {
+            then(function(data) {
               $scope.groups = data;
               angular.forEach($scope.groups, function(u) {
                 u.langlabel = getLabel(u);
               });
               $scope.isLoadingGroups = false;
-            }).error(function(data) {
+            }, function(data) {
               // TODO
               $scope.isLoadingGroups = false;
             }).then(function() {
@@ -164,10 +164,10 @@
 
       function loadUsers() {
         $scope.isLoadingUsers = true;
-        $http.get('../api/users').success(function(data) {
+        $http.get('../api/users').then(function(data) {
           $scope.users = data;
           $scope.isLoadingUsers = false;
-        }).error(function(data) {
+        }, function(data) {
           // TODO
           $scope.isLoadingUsers = false;
         }).then(function() {
@@ -192,9 +192,9 @@
        */
       function loadGroupUsers(groupId) {
         $http.get('../api/groups/' + groupId + '/users').
-        success(function(data) {
+        then(function(data) {
           $scope.groupusers = data;
-        }).error(function(data) {
+        }, function(data) {
           $scope.groupusers = [];
         });
       }
@@ -265,7 +265,7 @@
         $scope.userGroups = null;
 
         $http.get('../api/users/' + u.id)
-            .success(function(data) {
+            .then(function(data) {
               $scope.userSelected = data;
               $scope.userIsAdmin =
                   (data.profile === 'Administrator');
@@ -274,12 +274,12 @@
 
               // Load user group and then select user
               $http.get('../api/users/' + u.id + '/groups')
-              .success(function(groups) {
+              .then(function(groups) {
                     $scope.userGroups = groups;
                   }).error(function(data) {
                     // TODO
                   });
-            }).error(function(data) {
+            }, function(data) {
               // TODO
             });
 
@@ -320,11 +320,11 @@
         $http.post('../api/users/' + $scope.userSelected.id +
             '/actions/forget-password',
           params)
-            .success(function(data) {
+            .then(function(data) {
               $scope.resetPassword1 = null;
               $scope.resetPassword2 = null;
               $('#passwordResetModal').modal('hide');
-            }).error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('resetPasswordError'),
                 error: data,
@@ -573,11 +573,10 @@
       $scope.deleteUser = function(formId) {
         $http.delete('../api/users/' +
             $scope.userSelected.id)
-            .success(function(data) {
+            .then(function(data) {
               $scope.unselectUser();
               loadUsers();
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('userDeleteError'),
                 error: data,
@@ -664,8 +663,7 @@
           $scope.groupSelected.id != -99 ?
             '/' + $scope.groupSelected.id : ''
         ), $scope.groupSelected)
-          .success(createOrModifyGroupSuccess)
-          .error(createOrModifyGroupError);
+          .then(createOrModifyGroupSuccess, createOrModifyGroupError);
       };
 
 
@@ -703,11 +701,10 @@
       $scope.deleteGroup = function(formId) {
         $http.delete('../api/groups/' +
                 $scope.groupSelected.id + '?force=true')
-            .success(function(data) {
+            .then(function(data) {
               $scope.unselectGroup();
               loadGroups();
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('groupDeleteError'),
                 error: data,

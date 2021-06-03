@@ -49,9 +49,9 @@
           };
 
           $http.get('admin.harvester.info@json?type=icons', {cache: true})
-              .success(function(data) {
-                scope.logos = data[0];
-              });
+            .then(function(data) {
+              scope.logos = data[0];
+            });
         }
       };
     }]);

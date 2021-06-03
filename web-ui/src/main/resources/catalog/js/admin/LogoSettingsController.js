@@ -47,10 +47,10 @@
        */
       loadLogo = function() {
         $scope.logos = [];
-        $http.get('../api/logos').
-            success(function(data) {
-              $scope.logos = data;
-            });
+        $http.get('../api/logos')
+          .then(function(data) {
+            $scope.logos = data;
+          });
       };
 
       /**
@@ -85,14 +85,13 @@
       $scope.setCatalogLogo = function(logoName, asFavicon) {
         $http.put('../api/site/logo?file=' + logoName +
             '&asFavicon=' + asFavicon)
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('logoUpdated'),
                 timeout: 2,
                 type: 'success'});
               $rootScope.$broadcast('loadCatalogInfo');
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('logoUpdateError'),
                 error: data,
@@ -107,14 +106,13 @@
        */
       $scope.removeLogo = function(logoName) {
         $http.delete('../api/logos/' + logoName)
-            .success(function(data) {
+            .then(function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 msg: $translate.instant('logoRemoved'),
                 timeout: 2,
                 type: 'success'});
               loadLogo();
-            })
-            .error(function(data) {
+            }, function(data) {
               $rootScope.$broadcast('StatusUpdated', {
                 title: $translate.instant('logoRemoveError'),
                 error: data,
