@@ -1,7 +1,7 @@
 /*!
- * angular-translate - v2.12.1 - 2016-09-15
- * 
- * Copyright (c) 2016 The angular-translate team, Pascal Precht; Licensed MIT
+ * angular-translate - v2.18.4 - 2021-01-14
+ *
+ * Copyright (c) 2021 The angular-translate team, Pascal Precht; Licensed MIT
  */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
@@ -9,7 +9,7 @@
     define([], function () {
       return (factory());
     });
-  } else if (typeof exports === 'object') {
+  } else if (typeof module === 'object' && module.exports) {
     // Node. Does not work with strict CommonJS, but
     // only CommonJS-like environments that support module.exports,
     // like Node.
@@ -19,384 +19,388 @@
   }
 }(this, function () {
 
-/**
- * @ngdoc overview
- * @name pascalprecht.translate
- *
- * @description
- * The main module which holds everything together.
- */
-runTranslate.$inject = ['$translate'];
-$translate.$inject = ['$STORAGE_KEY', '$windowProvider', '$translateSanitizationProvider', 'pascalprechtTranslateOverrider'];
-$translateDefaultInterpolation.$inject = ['$interpolate', '$translateSanitization'];
-translateDirective.$inject = ['$translate', '$interpolate', '$compile', '$parse', '$rootScope'];
-translateAttrDirective.$inject = ['$translate', '$rootScope'];
-translateCloakDirective.$inject = ['$translate', '$rootScope'];
-translateFilterFactory.$inject = ['$parse', '$translate'];
-$translationCache.$inject = ['$cacheFactory'];
-angular.module('pascalprecht.translate', ['ng'])
-  .run(runTranslate);
+  /**
+   * @ngdoc overview
+   * @name pascalprecht.translate
+   *
+   * @description
+   * The main module which holds everything together.
+   */
+  runTranslate.$inject = ['$translate'];
+  $translate.$inject = ['$STORAGE_KEY', '$windowProvider', '$translateSanitizationProvider', 'pascalprechtTranslateOverrider'];
+  $translateDefaultInterpolation.$inject = ['$interpolate', '$translateSanitization'];
+  translateDirective.$inject = ['$translate', '$interpolate', '$compile', '$parse', '$rootScope'];
+  translateAttrDirective.$inject = ['$translate', '$rootScope'];
+  translateCloakDirective.$inject = ['$translate', '$rootScope'];
+  translateFilterFactory.$inject = ['$parse', '$translate'];
+  $translationCache.$inject = ['$cacheFactory'];
+  angular.module('pascalprecht.translate', ['ng'])
+    .run(runTranslate);
 
-function runTranslate($translate) {
+  function runTranslate($translate) {
 
-  'use strict';
+    'use strict';
 
-  var key = $translate.storageKey(),
-    storage = $translate.storage();
+    var key = $translate.storageKey(),
+      storage = $translate.storage();
 
-  var fallbackFromIncorrectStorageValue = function () {
-    var preferred = $translate.preferredLanguage();
-    if (angular.isString(preferred)) {
-      $translate.use(preferred);
-      // $translate.use() will also remember the language.
-      // So, we don't need to call storage.put() here.
-    } else {
-      storage.put(key, $translate.use());
+    var fallbackFromIncorrectStorageValue = function () {
+      var preferred = $translate.preferredLanguage();
+      if (angular.isString(preferred)) {
+        $translate.use(preferred);
+        // $translate.use() will also remember the language.
+        // So, we don't need to call storage.put() here.
+      } else {
+        storage.put(key, $translate.use());
+      }
+    };
+
+    fallbackFromIncorrectStorageValue.displayName = 'fallbackFromIncorrectStorageValue';
+
+    if (storage) {
+      if (!storage.get(key)) {
+        fallbackFromIncorrectStorageValue();
+      } else {
+        $translate.use(storage.get(key))['catch'](fallbackFromIncorrectStorageValue);
+      }
+    } else if (angular.isString($translate.preferredLanguage())) {
+      $translate.use($translate.preferredLanguage());
     }
-  };
-
-  fallbackFromIncorrectStorageValue.displayName = 'fallbackFromIncorrectStorageValue';
-
-  if (storage) {
-    if (!storage.get(key)) {
-      fallbackFromIncorrectStorageValue();
-    } else {
-      $translate.use(storage.get(key))['catch'](fallbackFromIncorrectStorageValue);
-    }
-  } else if (angular.isString($translate.preferredLanguage())) {
-    $translate.use($translate.preferredLanguage());
   }
-}
 
-runTranslate.displayName = 'runTranslate';
+  runTranslate.displayName = 'runTranslate';
 
-/**
- * @ngdoc object
- * @name pascalprecht.translate.$translateSanitizationProvider
- *
- * @description
- *
- * Configurations for $translateSanitization
- */
-angular.module('pascalprecht.translate').provider('$translateSanitization', $translateSanitizationProvider);
+  /**
+   * @ngdoc object
+   * @name pascalprecht.translate.$translateSanitizationProvider
+   *
+   * @description
+   *
+   * Configurations for $translateSanitization
+   */
+  angular.module('pascalprecht.translate').provider('$translateSanitization', $translateSanitizationProvider);
 
-function $translateSanitizationProvider () {
+  function $translateSanitizationProvider () {
 
-  'use strict';
+    'use strict';
 
-  var $sanitize,
+    var $sanitize,
       $sce,
       currentStrategy = null, // TODO change to either 'sanitize', 'escape' or ['sanitize', 'escapeParameters'] in 3.0.
       hasConfiguredStrategy = false,
       hasShownNoStrategyConfiguredWarning = false,
       strategies;
 
-  /**
-   * Definition of a sanitization strategy function
-   * @callback StrategyFunction
-   * @param {string|object} value - value to be sanitized (either a string or an interpolated value map)
-   * @param {string} mode - either 'text' for a string (translation) or 'params' for the interpolated params
-   * @return {string|object}
-   */
+    /**
+     * Definition of a sanitization strategy function
+     * @callback StrategyFunction
+     * @param {string|object} value - value to be sanitized (either a string or an interpolated value map)
+     * @param {string} mode - either 'text' for a string (translation) or 'params' for the interpolated params
+     * @return {string|object}
+     */
 
-  /**
-   * @ngdoc property
-   * @name strategies
-   * @propertyOf pascalprecht.translate.$translateSanitizationProvider
-   *
-   * @description
-   * Following strategies are built-in:
-   * <dl>
-   *   <dt>sanitize</dt>
-   *   <dd>Sanitizes HTML in the translation text using $sanitize</dd>
-   *   <dt>escape</dt>
-   *   <dd>Escapes HTML in the translation</dd>
-   *   <dt>sanitizeParameters</dt>
-   *   <dd>Sanitizes HTML in the values of the interpolation parameters using $sanitize</dd>
-   *   <dt>escapeParameters</dt>
-   *   <dd>Escapes HTML in the values of the interpolation parameters</dd>
-   *   <dt>escaped</dt>
-   *   <dd>Support legacy strategy name 'escaped' for backwards compatibility (will be removed in 3.0)</dd>
-   * </dl>
-   *
-   */
+    /**
+     * @ngdoc property
+     * @name strategies
+     * @propertyOf pascalprecht.translate.$translateSanitizationProvider
+     *
+     * @description
+     * Following strategies are built-in:
+     * <dl>
+     *   <dt>sanitize</dt>
+     *   <dd>Sanitizes HTML in the translation text using $sanitize</dd>
+     *   <dt>escape</dt>
+     *   <dd>Escapes HTML in the translation</dd>
+     *   <dt>sanitizeParameters</dt>
+     *   <dd>Sanitizes HTML in the values of the interpolation parameters using $sanitize</dd>
+     *   <dt>escapeParameters</dt>
+     *   <dd>Escapes HTML in the values of the interpolation parameters</dd>
+     *   <dt>escaped</dt>
+     *   <dd>Support legacy strategy name 'escaped' for backwards compatibility (will be removed in 3.0)</dd>
+     * </dl>
+     *
+     */
 
-  strategies = {
-    sanitize: function (value, mode/*, context*/) {
-      if (mode === 'text') {
-        value = htmlSanitizeValue(value);
-      }
-      return value;
-    },
-    escape: function (value, mode/*, context*/) {
-      if (mode === 'text') {
-        value = htmlEscapeValue(value);
-      }
-      return value;
-    },
-    sanitizeParameters: function (value, mode/*, context*/) {
-      if (mode === 'params') {
-        value = mapInterpolationParameters(value, htmlSanitizeValue);
-      }
-      return value;
-    },
-    escapeParameters: function (value, mode/*, context*/) {
-      if (mode === 'params') {
-        value = mapInterpolationParameters(value, htmlEscapeValue);
-      }
-      return value;
-    },
-    sce: function (value, mode, context) {
-      if (mode === 'text') {
-        value = htmlTrustValue(value);
-      } else if (mode === 'params') {
-        if (context !== 'filter') {
-          // do html escape in filter context #1101
+    strategies = {
+      sanitize: function (value, mode/*, context*/) {
+        if (mode === 'text') {
+          value = htmlSanitizeValue(value);
+        }
+        return value;
+      },
+      escape: function (value, mode/*, context*/) {
+        if (mode === 'text') {
+          value = htmlEscapeValue(value);
+        }
+        return value;
+      },
+      sanitizeParameters: function (value, mode/*, context*/) {
+        if (mode === 'params') {
+          value = mapInterpolationParameters(value, htmlSanitizeValue);
+        }
+        return value;
+      },
+      escapeParameters: function (value, mode/*, context*/) {
+        if (mode === 'params') {
           value = mapInterpolationParameters(value, htmlEscapeValue);
         }
+        return value;
+      },
+      sce: function (value, mode, context) {
+        if (mode === 'text') {
+          value = htmlTrustValue(value);
+        } else if (mode === 'params') {
+          if (context !== 'filter') {
+            // do html escape in filter context #1101
+            value = mapInterpolationParameters(value, htmlEscapeValue);
+          }
+        }
+        return value;
+      },
+      sceParameters: function (value, mode/*, context*/) {
+        if (mode === 'params') {
+          value = mapInterpolationParameters(value, htmlTrustValue);
+        }
+        return value;
       }
-      return value;
-    },
-    sceParameters: function (value, mode/*, context*/) {
-      if (mode === 'params') {
-        value = mapInterpolationParameters(value, htmlTrustValue);
+    };
+    // Support legacy strategy name 'escaped' for backwards compatibility.
+    // TODO should be removed in 3.0
+    strategies.escaped = strategies.escapeParameters;
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateSanitizationProvider#addStrategy
+     * @methodOf pascalprecht.translate.$translateSanitizationProvider
+     *
+     * @description
+     * Adds a sanitization strategy to the list of known strategies.
+     *
+     * @param {string} strategyName - unique key for a strategy
+     * @param {StrategyFunction} strategyFunction - strategy function
+     * @returns {object} this
+     */
+    this.addStrategy = function (strategyName, strategyFunction) {
+      strategies[strategyName] = strategyFunction;
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateSanitizationProvider#removeStrategy
+     * @methodOf pascalprecht.translate.$translateSanitizationProvider
+     *
+     * @description
+     * Removes a sanitization strategy from the list of known strategies.
+     *
+     * @param {string} strategyName - unique key for a strategy
+     * @returns {object} this
+     */
+    this.removeStrategy = function (strategyName) {
+      delete strategies[strategyName];
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateSanitizationProvider#useStrategy
+     * @methodOf pascalprecht.translate.$translateSanitizationProvider
+     *
+     * @description
+     * Selects a sanitization strategy. When an array is provided the strategies will be executed in order.
+     *
+     * @param {string|StrategyFunction|array} strategy The sanitization strategy / strategies which should be used. Either a name of an existing strategy, a custom strategy function, or an array consisting of multiple names and / or custom functions.
+     * @returns {object} this
+     */
+    this.useStrategy = function (strategy) {
+      hasConfiguredStrategy = true;
+      currentStrategy = strategy;
+      return this;
+    };
+
+    /**
+     * @ngdoc object
+     * @name pascalprecht.translate.$translateSanitization
+     * @requires $injector
+     * @requires $log
+     *
+     * @description
+     * Sanitizes interpolation parameters and translated texts.
+     *
+     */
+    this.$get = ['$injector', '$log', function ($injector, $log) {
+
+      var cachedStrategyMap = {};
+
+      var applyStrategies = function (value, mode, context, selectedStrategies) {
+        angular.forEach(selectedStrategies, function (selectedStrategy) {
+          if (angular.isFunction(selectedStrategy)) {
+            value = selectedStrategy(value, mode, context);
+          } else if (angular.isFunction(strategies[selectedStrategy])) {
+            value = strategies[selectedStrategy](value, mode, context);
+          } else if (angular.isString(strategies[selectedStrategy])) {
+            if (!cachedStrategyMap[strategies[selectedStrategy]]) {
+              try {
+                cachedStrategyMap[strategies[selectedStrategy]] = $injector.get(strategies[selectedStrategy]);
+              } catch (e) {
+                cachedStrategyMap[strategies[selectedStrategy]] = function() {};
+                throw new Error('pascalprecht.translate.$translateSanitization: Unknown sanitization strategy: \'' + selectedStrategy + '\'');
+              }
+            }
+            value = cachedStrategyMap[strategies[selectedStrategy]](value, mode, context);
+          } else {
+            throw new Error('pascalprecht.translate.$translateSanitization: Unknown sanitization strategy: \'' + selectedStrategy + '\'');
+          }
+        });
+        return value;
+      };
+
+      // TODO: should be removed in 3.0
+      var showNoStrategyConfiguredWarning = function () {
+        if (!hasConfiguredStrategy && !hasShownNoStrategyConfiguredWarning) {
+          $log.warn('pascalprecht.translate.$translateSanitization: No sanitization strategy has been configured. This can have serious security implications. See http://angular-translate.github.io/docs/#/guide/19_security for details.');
+          hasShownNoStrategyConfiguredWarning = true;
+        }
+      };
+
+      if ($injector.has('$sanitize')) {
+        $sanitize = $injector.get('$sanitize');
       }
-      return value;
-    }
-  };
-  // Support legacy strategy name 'escaped' for backwards compatibility.
-  // TODO should be removed in 3.0
-  strategies.escaped = strategies.escapeParameters;
+      if ($injector.has('$sce')) {
+        $sce = $injector.get('$sce');
+      }
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateSanitizationProvider#addStrategy
-   * @methodOf pascalprecht.translate.$translateSanitizationProvider
-   *
-   * @description
-   * Adds a sanitization strategy to the list of known strategies.
-   *
-   * @param {string} strategyName - unique key for a strategy
-   * @param {StrategyFunction} strategyFunction - strategy function
-   * @returns {object} this
-   */
-  this.addStrategy = function (strategyName, strategyFunction) {
-    strategies[strategyName] = strategyFunction;
-    return this;
-  };
+      return {
+        /**
+         * @ngdoc function
+         * @name pascalprecht.translate.$translateSanitization#useStrategy
+         * @methodOf pascalprecht.translate.$translateSanitization
+         *
+         * @description
+         * Selects a sanitization strategy. When an array is provided the strategies will be executed in order.
+         *
+         * @param {string|StrategyFunction|array} strategy The sanitization strategy / strategies which should be used. Either a name of an existing strategy, a custom strategy function, or an array consisting of multiple names and / or custom functions.
+         */
+        useStrategy: (function (self) {
+          return function (strategy) {
+            self.useStrategy(strategy);
+          };
+        })(this),
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateSanitizationProvider#removeStrategy
-   * @methodOf pascalprecht.translate.$translateSanitizationProvider
-   *
-   * @description
-   * Removes a sanitization strategy from the list of known strategies.
-   *
-   * @param {string} strategyName - unique key for a strategy
-   * @returns {object} this
-   */
-  this.removeStrategy = function (strategyName) {
-    delete strategies[strategyName];
-    return this;
-  };
+        /**
+         * @ngdoc function
+         * @name pascalprecht.translate.$translateSanitization#sanitize
+         * @methodOf pascalprecht.translate.$translateSanitization
+         *
+         * @description
+         * Sanitizes a value.
+         *
+         * @param {string|object} value The value which should be sanitized.
+         * @param {string} mode The current sanitization mode, either 'params' or 'text'.
+         * @param {string|StrategyFunction|array} [strategy] Optional custom strategy which should be used instead of the currently selected strategy.
+         * @param {string} [context] The context of this call: filter, service. Default is service
+         * @returns {string|object} sanitized value
+         */
+        sanitize: function (value, mode, strategy, context) {
+          if (!currentStrategy) {
+            showNoStrategyConfiguredWarning();
+          }
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateSanitizationProvider#useStrategy
-   * @methodOf pascalprecht.translate.$translateSanitizationProvider
-   *
-   * @description
-   * Selects a sanitization strategy. When an array is provided the strategies will be executed in order.
-   *
-   * @param {string|StrategyFunction|array} strategy The sanitization strategy / strategies which should be used. Either a name of an existing strategy, a custom strategy function, or an array consisting of multiple names and / or custom functions.
-   * @returns {object} this
-   */
-  this.useStrategy = function (strategy) {
-    hasConfiguredStrategy = true;
-    currentStrategy = strategy;
-    return this;
-  };
+          if (!strategy && strategy !== null) {
+            strategy = currentStrategy;
+          }
+
+          if (!strategy) {
+            return value;
+          }
+
+          if (!context) {
+            context = 'service';
+          }
+
+          var selectedStrategies = angular.isArray(strategy) ? strategy : [strategy];
+          return applyStrategies(value, mode, context, selectedStrategies);
+        }
+      };
+    }];
+
+    var htmlEscapeValue = function (value) {
+      var element = angular.element('<div></div>');
+      element.text(value); // not chainable, see #1044
+      return element.html();
+    };
+
+    var htmlSanitizeValue = function (value) {
+      if (!$sanitize) {
+        throw new Error('pascalprecht.translate.$translateSanitization: Error cannot find $sanitize service. Either include the ngSanitize module (https://docs.angularjs.org/api/ngSanitize) or use a sanitization strategy which does not depend on $sanitize, such as \'escape\'.');
+      }
+      return $sanitize(value);
+    };
+
+    var htmlTrustValue = function (value) {
+      if (!$sce) {
+        throw new Error('pascalprecht.translate.$translateSanitization: Error cannot find $sce service.');
+      }
+      return $sce.trustAsHtml(value);
+    };
+
+    var mapInterpolationParameters = function (value, iteratee, stack) {
+      if (angular.isDate(value)) {
+        return value;
+      } else if (angular.isObject(value)) {
+        var result = angular.isArray(value) ? [] : {};
+
+        if (!stack) {
+          stack = [];
+        } else {
+          if (stack.indexOf(value) > -1) {
+            throw new Error('pascalprecht.translate.$translateSanitization: Error cannot interpolate parameter due recursive object');
+          }
+        }
+
+        stack.push(value);
+        angular.forEach(value, function (propertyValue, propertyKey) {
+
+          /* Skipping function properties. */
+          if (angular.isFunction(propertyValue)) {
+            return;
+          }
+
+          result[propertyKey] = mapInterpolationParameters(propertyValue, iteratee, stack);
+        });
+        stack.splice(-1, 1); // remove last
+
+        return result;
+      } else if (angular.isNumber(value)) {
+        return value;
+      } else if (value === true || value === false) {
+        return value;
+      } else if (!angular.isUndefined(value) && value !== null) {
+        return iteratee(value);
+      } else {
+        return value;
+      }
+    };
+  }
 
   /**
    * @ngdoc object
-   * @name pascalprecht.translate.$translateSanitization
-   * @requires $injector
-   * @requires $log
-   *
+   * @name pascalprecht.translate.$translateProvider
    * @description
-   * Sanitizes interpolation parameters and translated texts.
+   *
+   * $translateProvider allows developers to register translation-tables, asynchronous loaders
+   * and similar to configure translation behavior directly inside of a module.
    *
    */
-  this.$get = ['$injector', '$log', function ($injector, $log) {
+  angular.module('pascalprecht.translate')
+    .constant('pascalprechtTranslateOverrider', {})
+    .provider('$translate', $translate);
 
-    var cachedStrategyMap = {};
+  function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvider, pascalprechtTranslateOverrider) {
 
-    var applyStrategies = function (value, mode, context, selectedStrategies) {
-      angular.forEach(selectedStrategies, function (selectedStrategy) {
-        if (angular.isFunction(selectedStrategy)) {
-          value = selectedStrategy(value, mode, context);
-        } else if (angular.isFunction(strategies[selectedStrategy])) {
-          value = strategies[selectedStrategy](value, mode, context);
-        } else if (angular.isString(strategies[selectedStrategy])) {
-          if (!cachedStrategyMap[strategies[selectedStrategy]]) {
-            try {
-              cachedStrategyMap[strategies[selectedStrategy]] = $injector.get(strategies[selectedStrategy]);
-            } catch (e) {
-              cachedStrategyMap[strategies[selectedStrategy]] = function() {};
-              throw new Error('pascalprecht.translate.$translateSanitization: Unknown sanitization strategy: \'' + selectedStrategy + '\'');
-            }
-          }
-          value = cachedStrategyMap[strategies[selectedStrategy]](value, mode, context);
-        } else {
-          throw new Error('pascalprecht.translate.$translateSanitization: Unknown sanitization strategy: \'' + selectedStrategy + '\'');
-        }
-      });
-      return value;
-    };
+    'use strict';
 
-    // TODO: should be removed in 3.0
-    var showNoStrategyConfiguredWarning = function () {
-      if (!hasConfiguredStrategy && !hasShownNoStrategyConfiguredWarning) {
-        $log.warn('pascalprecht.translate.$translateSanitization: No sanitization strategy has been configured. This can have serious security implications. See http://angular-translate.github.io/docs/#/guide/19_security for details.');
-        hasShownNoStrategyConfiguredWarning = true;
-      }
-    };
-
-    if ($injector.has('$sanitize')) {
-      $sanitize = $injector.get('$sanitize');
-    }
-    if ($injector.has('$sce')) {
-      $sce = $injector.get('$sce');
-    }
-
-    return {
-      /**
-       * @ngdoc function
-       * @name pascalprecht.translate.$translateSanitization#useStrategy
-       * @methodOf pascalprecht.translate.$translateSanitization
-       *
-       * @description
-       * Selects a sanitization strategy. When an array is provided the strategies will be executed in order.
-       *
-       * @param {string|StrategyFunction|array} strategy The sanitization strategy / strategies which should be used. Either a name of an existing strategy, a custom strategy function, or an array consisting of multiple names and / or custom functions.
-       */
-      useStrategy: (function (self) {
-        return function (strategy) {
-          self.useStrategy(strategy);
-        };
-      })(this),
-
-      /**
-       * @ngdoc function
-       * @name pascalprecht.translate.$translateSanitization#sanitize
-       * @methodOf pascalprecht.translate.$translateSanitization
-       *
-       * @description
-       * Sanitizes a value.
-       *
-       * @param {string|object} value The value which should be sanitized.
-       * @param {string} mode The current sanitization mode, either 'params' or 'text'.
-       * @param {string|StrategyFunction|array} [strategy] Optional custom strategy which should be used instead of the currently selected strategy.
-       * @param {string} [context] The context of this call: filter, service. Default is service
-       * @returns {string|object} sanitized value
-       */
-      sanitize: function (value, mode, strategy, context) {
-        if (!currentStrategy) {
-          showNoStrategyConfiguredWarning();
-        }
-
-        if (!strategy && strategy !== null) {
-          strategy = currentStrategy;
-        }
-
-        if (!strategy) {
-          return value;
-        }
-
-        if (!context) {
-          context = 'service';
-        }
-
-        var selectedStrategies = angular.isArray(strategy) ? strategy : [strategy];
-        return applyStrategies(value, mode, context, selectedStrategies);
-      }
-    };
-  }];
-
-  var htmlEscapeValue = function (value) {
-    var element = angular.element('<div></div>');
-    element.text(value); // not chainable, see #1044
-    return element.html();
-  };
-
-  var htmlSanitizeValue = function (value) {
-    if (!$sanitize) {
-      throw new Error('pascalprecht.translate.$translateSanitization: Error cannot find $sanitize service. Either include the ngSanitize module (https://docs.angularjs.org/api/ngSanitize) or use a sanitization strategy which does not depend on $sanitize, such as \'escape\'.');
-    }
-    return $sanitize(value);
-  };
-
-  var htmlTrustValue = function (value) {
-    if (!$sce) {
-      throw new Error('pascalprecht.translate.$translateSanitization: Error cannot find $sce service.');
-    }
-    return $sce.trustAsHtml(value);
-  };
-
-  var mapInterpolationParameters = function (value, iteratee, stack) {
-    if (angular.isDate(value)) {
-      return value;
-    } else if (angular.isObject(value)) {
-      var result = angular.isArray(value) ? [] : {};
-
-      if (!stack) {
-        stack = [];
-      } else {
-        if (stack.indexOf(value) > -1) {
-          throw new Error('pascalprecht.translate.$translateSanitization: Error cannot interpolate parameter due recursive object');
-        }
-      }
-
-      stack.push(value);
-      angular.forEach(value, function (propertyValue, propertyKey) {
-
-        /* Skipping function properties. */
-        if (angular.isFunction(propertyValue)) {
-          return;
-        }
-
-        result[propertyKey] = mapInterpolationParameters(propertyValue, iteratee, stack);
-      });
-      stack.splice(-1, 1); // remove last
-
-      return result;
-    } else if (angular.isNumber(value)) {
-      return value;
-    } else {
-      return iteratee(value);
-    }
-  };
-}
-
-/**
- * @ngdoc object
- * @name pascalprecht.translate.$translateProvider
- * @description
- *
- * $translateProvider allows developers to register translation-tables, asynchronous loaders
- * and similar to configure translation behavior directly inside of a module.
- *
- */
-angular.module('pascalprecht.translate')
-.constant('pascalprechtTranslateOverrider', {})
-.provider('$translate', $translate);
-
-function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvider, pascalprechtTranslateOverrider) {
-
-  'use strict';
-
-  var $translationTable = {},
+    var $translationTable = {},
       $preferredLanguage,
       $availableLanguageKeys = [],
       $languageKeyAliases,
@@ -426,1027 +430,1063 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
       postProcessFn,
       uniformLanguageTagResolver = 'default',
       languageTagResolver = {
-        'default': function (tag) {
+        'default' : function (tag) {
           return (tag || '').split('-').join('_');
         },
-        java: function (tag) {
+        java : function (tag) {
           var temp = (tag || '').split('-').join('_');
           var parts = temp.split('_');
           return parts.length > 1 ? (parts[0].toLowerCase() + '_' + parts[1].toUpperCase()) : temp;
         },
-        bcp47: function (tag) {
+        bcp47 : function (tag) {
           var temp = (tag || '').split('_').join('-');
           var parts = temp.split('-');
-          return parts.length > 1 ? (parts[0].toLowerCase() + '-' + parts[1].toUpperCase()) : temp;
+
+          switch (parts.length) {
+            case 1: // language only
+              parts[0] = parts[0].toLowerCase();
+              break;
+            case 2: // language-script or language-region
+              parts[0] = parts[0].toLowerCase();
+              if (parts[1].length === 4) { // parts[1] is script
+                parts[1] = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
+              } else { // parts[1] is region
+                parts[1] = parts[1].toUpperCase();
+              }
+              break;
+            case 3: // language-script-region
+              parts[0] = parts[0].toLowerCase();
+              parts[1] = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
+              parts[2] = parts[2].toUpperCase();
+              break;
+            default:
+              return temp;
+          }
+
+          return parts.join('-');
         },
-        'iso639-1': function (tag) {
+        'iso639-1' : function (tag) {
           var temp = (tag || '').split('_').join('-');
           var parts = temp.split('-');
           return parts[0].toLowerCase();
         }
       };
 
-  var version = '2.12.1';
+    var version = '2.18.4';
 
-  // tries to determine the browsers language
-  var getFirstBrowserLanguage = function () {
+    // tries to determine the browsers language
+    var getFirstBrowserLanguage = function () {
 
-    // internal purpose only
-    if (angular.isFunction(pascalprechtTranslateOverrider.getLocale)) {
-      return pascalprechtTranslateOverrider.getLocale();
-    }
+      // internal purpose only
+      if (angular.isFunction(pascalprechtTranslateOverrider.getLocale)) {
+        return pascalprechtTranslateOverrider.getLocale();
+      }
 
-    var nav = $windowProvider.$get().navigator,
+      var nav = $windowProvider.$get().navigator,
         browserLanguagePropertyKeys = ['language', 'browserLanguage', 'systemLanguage', 'userLanguage'],
         i,
         language;
 
-    // support for HTML 5.1 "navigator.languages"
-    if (angular.isArray(nav.languages)) {
-      for (i = 0; i < nav.languages.length; i++) {
-        language = nav.languages[i];
+      // support for HTML 5.1 "navigator.languages"
+      if (angular.isArray(nav.languages)) {
+        for (i = 0; i < nav.languages.length; i++) {
+          language = nav.languages[i];
+          if (language && language.length) {
+            return language;
+          }
+        }
+      }
+
+      // support for other well known properties in browsers
+      for (i = 0; i < browserLanguagePropertyKeys.length; i++) {
+        language = nav[browserLanguagePropertyKeys[i]];
         if (language && language.length) {
           return language;
         }
       }
-    }
 
-    // support for other well known properties in browsers
-    for (i = 0; i < browserLanguagePropertyKeys.length; i++) {
-      language = nav[browserLanguagePropertyKeys[i]];
-      if (language && language.length) {
-        return language;
+      return null;
+    };
+    getFirstBrowserLanguage.displayName = 'angular-translate/service: getFirstBrowserLanguage';
+
+    // tries to determine the browsers locale
+    var getLocale = function () {
+      var locale = getFirstBrowserLanguage() || '';
+      if (languageTagResolver[uniformLanguageTagResolver]) {
+        locale = languageTagResolver[uniformLanguageTagResolver](locale);
       }
-    }
+      return locale;
+    };
+    getLocale.displayName = 'angular-translate/service: getLocale';
 
-    return null;
-  };
-  getFirstBrowserLanguage.displayName = 'angular-translate/service: getFirstBrowserLanguage';
-
-  // tries to determine the browsers locale
-  var getLocale = function () {
-    var locale = getFirstBrowserLanguage() || '';
-    if (languageTagResolver[uniformLanguageTagResolver]) {
-      locale = languageTagResolver[uniformLanguageTagResolver](locale);
-    }
-    return locale;
-  };
-  getLocale.displayName = 'angular-translate/service: getLocale';
-
-  /**
-   * @name indexOf
-   * @private
-   *
-   * @description
-   * indexOf polyfill. Kinda sorta.
-   *
-   * @param {array} array Array to search in.
-   * @param {string} searchElement Element to search for.
-   *
-   * @returns {int} Index of search element.
-   */
-  var indexOf = function(array, searchElement) {
-    for (var i = 0, len = array.length; i < len; i++) {
-      if (array[i] === searchElement) {
-        return i;
+    /**
+     * @name indexOf
+     * @private
+     *
+     * @description
+     * indexOf polyfill. Kinda sorta.
+     *
+     * @param {array} array Array to search in.
+     * @param {string} searchElement Element to search for.
+     *
+     * @returns {int} Index of search element.
+     */
+    var indexOf = function (array, searchElement) {
+      for (var i = 0, len = array.length; i < len; i++) {
+        if (array[i] === searchElement) {
+          return i;
+        }
       }
-    }
-    return -1;
-  };
+      return -1;
+    };
 
-  /**
-   * @name trim
-   * @private
-   *
-   * @description
-   * trim polyfill
-   *
-   * @returns {string} The string stripped of whitespace from both ends
-   */
-  var trim = function() {
-    return this.toString().replace(/^\s+|\s+$/g, '');
-  };
+    /**
+     * @name trim
+     * @private
+     *
+     * @description
+     * trim polyfill
+     *
+     * @returns {string} The string stripped of whitespace from both ends
+     */
+    var trim = function () {
+      return this.toString().replace(/^\s+|\s+$/g, '');
+    };
 
-  var negotiateLocale = function (preferred) {
-    if(!preferred) {
-      return;
-    }
+    /**
+     * @name lowercase
+     * @private
+     *
+     * @description
+     * Return the lowercase string only if the type is string
+     *
+     * @returns {string} The string all in lowercase
+     */
+    var lowercase = function (string) {
+      return angular.isString(string) ? string.toLowerCase() : string;
+    };
 
-    var avail = [],
-        locale = angular.lowercase(preferred),
+    var negotiateLocale = function (preferred) {
+      if (!preferred) {
+        return;
+      }
+
+      var avail = [],
+        locale = lowercase(preferred),
         i = 0,
         n = $availableLanguageKeys.length;
 
-    for (; i < n; i++) {
-      avail.push(angular.lowercase($availableLanguageKeys[i]));
-    }
+      for (; i < n; i++) {
+        avail.push(lowercase($availableLanguageKeys[i]));
+      }
 
-    // Check for an exact match in our list of available keys
-    if (indexOf(avail, locale) > -1) {
-      return preferred;
-    }
+      // Check for an exact match in our list of available keys
+      i = indexOf(avail, locale);
+      if (i > -1) {
+        return $availableLanguageKeys[i];
+      }
 
-    if ($languageKeyAliases) {
-      var alias;
-      for (var langKeyAlias in $languageKeyAliases) {
-        if ($languageKeyAliases.hasOwnProperty(langKeyAlias)) {
-          var hasWildcardKey = false;
-          var hasExactKey = Object.prototype.hasOwnProperty.call($languageKeyAliases, langKeyAlias) &&
-            angular.lowercase(langKeyAlias) === angular.lowercase(preferred);
+      if ($languageKeyAliases) {
+        var alias;
+        for (var langKeyAlias in $languageKeyAliases) {
+          if ($languageKeyAliases.hasOwnProperty(langKeyAlias)) {
+            var hasWildcardKey = false;
+            var hasExactKey = Object.prototype.hasOwnProperty.call($languageKeyAliases, langKeyAlias) &&
+              lowercase(langKeyAlias) === lowercase(preferred);
 
-          if (langKeyAlias.slice(-1) === '*') {
-            hasWildcardKey = langKeyAlias.slice(0, -1) === preferred.slice(0, langKeyAlias.length - 1);
-          }
-          if (hasExactKey || hasWildcardKey) {
-            alias = $languageKeyAliases[langKeyAlias];
-            if (indexOf(avail, angular.lowercase(alias)) > -1) {
-              return alias;
+            if (langKeyAlias.slice(-1) === '*') {
+              hasWildcardKey = lowercase(langKeyAlias.slice(0, -1)) === lowercase(preferred.slice(0, langKeyAlias.length - 1));
+            }
+            if (hasExactKey || hasWildcardKey) {
+              alias = $languageKeyAliases[langKeyAlias];
+              if (indexOf(avail, lowercase(alias)) > -1) {
+                return alias;
+              }
             }
           }
         }
       }
-    }
 
-    // Check for a language code without region
-    var parts = preferred.split('_');
+      // Check for a language code without region
+      var parts = preferred.split('_');
 
-    if (parts.length > 1 && indexOf(avail, angular.lowercase(parts[0])) > -1) {
-      return parts[0];
-    }
-
-    // If everything fails, return undefined.
-    return;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#translations
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Registers a new translation table for specific language key.
-   *
-   * To register a translation table for specific language, pass a defined language
-   * key as first parameter.
-   *
-   * <pre>
-   *  // register translation table for language: 'de_DE'
-   *  $translateProvider.translations('de_DE', {
-   *    'GREETING': 'Hallo Welt!'
-   *  });
-   *
-   *  // register another one
-   *  $translateProvider.translations('en_US', {
-   *    'GREETING': 'Hello world!'
-   *  });
-   * </pre>
-   *
-   * When registering multiple translation tables for for the same language key,
-   * the actual translation table gets extended. This allows you to define module
-   * specific translation which only get added, once a specific module is loaded in
-   * your app.
-   *
-   * Invoking this method with no arguments returns the translation table which was
-   * registered with no language key. Invoking it with a language key returns the
-   * related translation table.
-   *
-   * @param {string} langKey A language key.
-   * @param {object} translationTable A plain old JavaScript object that represents a translation table.
-   *
-   */
-  var translations = function (langKey, translationTable) {
-
-    if (!langKey && !translationTable) {
-      return $translationTable;
-    }
-
-    if (langKey && !translationTable) {
-      if (angular.isString(langKey)) {
-        return $translationTable[langKey];
+      if (parts.length > 1 && indexOf(avail, lowercase(parts[0])) > -1) {
+        return parts[0];
       }
-    } else {
-      if (!angular.isObject($translationTable[langKey])) {
-        $translationTable[langKey] = {};
+
+      // If everything fails, return undefined.
+      return;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#translations
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Registers a new translation table for specific language key.
+     *
+     * To register a translation table for specific language, pass a defined language
+     * key as first parameter.
+     *
+     * <pre>
+     *  // register translation table for language: 'de_DE'
+     *  $translateProvider.translations('de_DE', {
+     *    'GREETING': 'Hallo Welt!'
+     *  });
+     *
+     *  // register another one
+     *  $translateProvider.translations('en_US', {
+     *    'GREETING': 'Hello world!'
+     *  });
+     * </pre>
+     *
+     * When registering multiple translation tables for for the same language key,
+     * the actual translation table gets extended. This allows you to define module
+     * specific translation which only get added, once a specific module is loaded in
+     * your app.
+     *
+     * Invoking this method with no arguments returns the translation table which was
+     * registered with no language key. Invoking it with a language key returns the
+     * related translation table.
+     *
+     * @param {string} langKey A language key.
+     * @param {object} translationTable A plain old JavaScript object that represents a translation table.
+     *
+     */
+    var translations = function (langKey, translationTable) {
+
+      if (!langKey && !translationTable) {
+        return $translationTable;
       }
-      angular.extend($translationTable[langKey], flatObject(translationTable));
-    }
-    return this;
-  };
 
-  this.translations = translations;
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#cloakClassName
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   *
-   * Let's you change the class name for `translate-cloak` directive.
-   * Default class name is `translate-cloak`.
-   *
-   * @param {string} name translate-cloak class name
-   */
-  this.cloakClassName = function (name) {
-    if (!name) {
-      return $cloakClassName;
-    }
-    $cloakClassName = name;
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#nestedObjectDelimeter
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   *
-   * Let's you change the delimiter for namespaced translations.
-   * Default delimiter is `.`.
-   *
-   * @param {string} delimiter namespace separator
-   */
-  this.nestedObjectDelimeter = function (delimiter) {
-    if (!delimiter) {
-      return $nestedObjectDelimeter;
-    }
-    $nestedObjectDelimeter = delimiter;
-    return this;
-  };
-
-  /**
-   * @name flatObject
-   * @private
-   *
-   * @description
-   * Flats an object. This function is used to flatten given translation data with
-   * namespaces, so they are later accessible via dot notation.
-   */
-  var flatObject = function (data, path, result, prevKey) {
-    var key, keyWithPath, keyWithShortPath, val;
-
-    if (!path) {
-      path = [];
-    }
-    if (!result) {
-      result = {};
-    }
-    for (key in data) {
-      if (!Object.prototype.hasOwnProperty.call(data, key)) {
-        continue;
-      }
-      val = data[key];
-      if (angular.isObject(val)) {
-        flatObject(val, path.concat(key), result, key);
-      } else {
-        keyWithPath = path.length ? ('' + path.join($nestedObjectDelimeter) + $nestedObjectDelimeter + key) : key;
-        if(path.length && key === prevKey){
-          // Create shortcut path (foo.bar == foo.bar.bar)
-          keyWithShortPath = '' + path.join($nestedObjectDelimeter);
-          // Link it to original path
-          result[keyWithShortPath] = '@:' + keyWithPath;
+      if (langKey && !translationTable) {
+        if (angular.isString(langKey)) {
+          return $translationTable[langKey];
         }
-        result[keyWithPath] = val;
-      }
-    }
-    return result;
-  };
-  flatObject.displayName = 'flatObject';
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#addInterpolation
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Adds interpolation services to angular-translate, so it can manage them.
-   *
-   * @param {object} factory Interpolation service factory
-   */
-  this.addInterpolation = function (factory) {
-    $interpolatorFactories.push(factory);
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useMessageFormatInterpolation
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use interpolation functionality of messageformat.js.
-   * This is useful when having high level pluralization and gender selection.
-   */
-  this.useMessageFormatInterpolation = function () {
-    return this.useInterpolation('$translateMessageFormatInterpolation');
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useInterpolation
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate which interpolation style to use as default, application-wide.
-   * Simply pass a factory/service name. The interpolation service has to implement
-   * the correct interface.
-   *
-   * @param {string} factory Interpolation service name.
-   */
-  this.useInterpolation = function (factory) {
-    $interpolationFactory = factory;
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useSanitizeStrategy
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Simply sets a sanitation strategy type.
-   *
-   * @param {string} value Strategy type.
-   */
-  this.useSanitizeValueStrategy = function (value) {
-    $translateSanitizationProvider.useStrategy(value);
-    return this;
-  };
-
- /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#preferredLanguage
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells the module which of the registered translation tables to use for translation
-   * at initial startup by passing a language key. Similar to `$translateProvider#use`
-   * only that it says which language to **prefer**.
-   *
-   * @param {string} langKey A language key.
-   */
-  this.preferredLanguage = function(langKey) {
-    if (langKey) {
-      setupPreferredLanguage(langKey);
-      return this;
-    }
-    return $preferredLanguage;
-  };
-  var setupPreferredLanguage = function (langKey) {
-    if (langKey) {
-      $preferredLanguage = langKey;
-    }
-    return $preferredLanguage;
-  };
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#translationNotFoundIndicator
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Sets an indicator which is used when a translation isn't found. E.g. when
-   * setting the indicator as 'X' and one tries to translate a translation id
-   * called `NOT_FOUND`, this will result in `X NOT_FOUND X`.
-   *
-   * Internally this methods sets a left indicator and a right indicator using
-   * `$translateProvider.translationNotFoundIndicatorLeft()` and
-   * `$translateProvider.translationNotFoundIndicatorRight()`.
-   *
-   * **Note**: These methods automatically add a whitespace between the indicators
-   * and the translation id.
-   *
-   * @param {string} indicator An indicator, could be any string.
-   */
-  this.translationNotFoundIndicator = function (indicator) {
-    this.translationNotFoundIndicatorLeft(indicator);
-    this.translationNotFoundIndicatorRight(indicator);
-    return this;
-  };
-
-  /**
-   * ngdoc function
-   * @name pascalprecht.translate.$translateProvider#translationNotFoundIndicatorLeft
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Sets an indicator which is used when a translation isn't found left to the
-   * translation id.
-   *
-   * @param {string} indicator An indicator.
-   */
-  this.translationNotFoundIndicatorLeft = function (indicator) {
-    if (!indicator) {
-      return $notFoundIndicatorLeft;
-    }
-    $notFoundIndicatorLeft = indicator;
-    return this;
-  };
-
-  /**
-   * ngdoc function
-   * @name pascalprecht.translate.$translateProvider#translationNotFoundIndicatorLeft
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Sets an indicator which is used when a translation isn't found right to the
-   * translation id.
-   *
-   * @param {string} indicator An indicator.
-   */
-  this.translationNotFoundIndicatorRight = function (indicator) {
-    if (!indicator) {
-      return $notFoundIndicatorRight;
-    }
-    $notFoundIndicatorRight = indicator;
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#fallbackLanguage
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells the module which of the registered translation tables to use when missing translations
-   * at initial startup by passing a language key. Similar to `$translateProvider#use`
-   * only that it says which language to **fallback**.
-   *
-   * @param {string||array} langKey A language key.
-   *
-   */
-  this.fallbackLanguage = function (langKey) {
-    fallbackStack(langKey);
-    return this;
-  };
-
-  var fallbackStack = function (langKey) {
-    if (langKey) {
-      if (angular.isString(langKey)) {
-        $fallbackWasString = true;
-        $fallbackLanguage = [ langKey ];
-      } else if (angular.isArray(langKey)) {
-        $fallbackWasString = false;
-        $fallbackLanguage = langKey;
-      }
-      if (angular.isString($preferredLanguage)  && indexOf($fallbackLanguage, $preferredLanguage) < 0) {
-        $fallbackLanguage.push($preferredLanguage);
-      }
-
-      return this;
-    } else {
-      if ($fallbackWasString) {
-        return $fallbackLanguage[0];
       } else {
-        return $fallbackLanguage;
-      }
-    }
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#use
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Set which translation table to use for translation by given language key. When
-   * trying to 'use' a language which isn't provided, it'll throw an error.
-   *
-   * You actually don't have to use this method since `$translateProvider#preferredLanguage`
-   * does the job too.
-   *
-   * @param {string} langKey A language key.
-   */
-  this.use = function (langKey) {
-    if (langKey) {
-      if (!$translationTable[langKey] && (!$loaderFactory)) {
-        // only throw an error, when not loading translation data asynchronously
-        throw new Error('$translateProvider couldn\'t find translationTable for langKey: \'' + langKey + '\'');
-      }
-      $uses = langKey;
-      return this;
-    }
-    return $uses;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#resolveClientLocale
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * This returns the current browser/client's language key. The result is processed with the configured uniform tag resolver.
-   *
-   * @returns {string} the current client/browser language key
-   */
-  this.resolveClientLocale = function () {
-    return getLocale();
-  };
-
- /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#storageKey
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells the module which key must represent the choosed language by a user in the storage.
-   *
-   * @param {string} key A key for the storage.
-   */
-  var storageKey = function(key) {
-    if (!key) {
-      if ($storagePrefix) {
-        return $storagePrefix + $storageKey;
-      }
-      return $storageKey;
-    }
-    $storageKey = key;
-    return this;
-  };
-
-  this.storageKey = storageKey;
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useUrlLoader
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use `$translateUrlLoader` extension service as loader.
-   *
-   * @param {string} url Url
-   * @param {Object=} options Optional configuration object
-   */
-  this.useUrlLoader = function (url, options) {
-    return this.useLoader('$translateUrlLoader', angular.extend({ url: url }, options));
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useStaticFilesLoader
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use `$translateStaticFilesLoader` extension service as loader.
-   *
-   * @param {Object=} options Optional configuration object
-   */
-  this.useStaticFilesLoader = function (options) {
-    return this.useLoader('$translateStaticFilesLoader', options);
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useLoader
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use any other service as loader.
-   *
-   * @param {string} loaderFactory Factory name to use
-   * @param {Object=} options Optional configuration object
-   */
-  this.useLoader = function (loaderFactory, options) {
-    $loaderFactory = loaderFactory;
-    $loaderOptions = options || {};
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useLocalStorage
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use `$translateLocalStorage` service as storage layer.
-   *
-   */
-  this.useLocalStorage = function () {
-    return this.useStorage('$translateLocalStorage');
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useCookieStorage
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use `$translateCookieStorage` service as storage layer.
-   */
-  this.useCookieStorage = function () {
-    return this.useStorage('$translateCookieStorage');
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useStorage
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use custom service as storage layer.
-   */
-  this.useStorage = function (storageFactory) {
-    $storageFactory = storageFactory;
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#storagePrefix
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Sets prefix for storage key.
-   *
-   * @param {string} prefix Storage key prefix
-   */
-  this.storagePrefix = function (prefix) {
-    if (!prefix) {
-      return prefix;
-    }
-    $storagePrefix = prefix;
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useMissingTranslationHandlerLog
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to use built-in log handler when trying to translate
-   * a translation Id which doesn't exist.
-   *
-   * This is actually a shortcut method for `useMissingTranslationHandler()`.
-   *
-   */
-  this.useMissingTranslationHandlerLog = function () {
-    return this.useMissingTranslationHandler('$translateMissingTranslationHandlerLog');
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useMissingTranslationHandler
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Expects a factory name which later gets instantiated with `$injector`.
-   * This method can be used to tell angular-translate to use a custom
-   * missingTranslationHandler. Just build a factory which returns a function
-   * and expects a translation id as argument.
-   *
-   * Example:
-   * <pre>
-   *  app.config(function ($translateProvider) {
-   *    $translateProvider.useMissingTranslationHandler('customHandler');
-   *  });
-   *
-   *  app.factory('customHandler', function (dep1, dep2) {
-   *    return function (translationId) {
-   *      // something with translationId and dep1 and dep2
-   *    };
-   *  });
-   * </pre>
-   *
-   * @param {string} factory Factory name
-   */
-  this.useMissingTranslationHandler = function (factory) {
-    $missingTranslationHandlerFactory = factory;
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#usePostCompiling
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * If post compiling is enabled, all translated values will be processed
-   * again with AngularJS' $compile.
-   *
-   * Example:
-   * <pre>
-   *  app.config(function ($translateProvider) {
-   *    $translateProvider.usePostCompiling(true);
-   *  });
-   * </pre>
-   *
-   * @param {string} factory Factory name
-   */
-  this.usePostCompiling = function (value) {
-    $postCompilingEnabled = !(!value);
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#forceAsyncReload
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * If force async reload is enabled, async loader will always be called
-   * even if $translationTable already contains the language key, adding
-   * possible new entries to the $translationTable.
-   *
-   * Example:
-   * <pre>
-   *  app.config(function ($translateProvider) {
-   *    $translateProvider.forceAsyncReload(true);
-   *  });
-   * </pre>
-   *
-   * @param {boolean} value - valid values are true or false
-   */
-  this.forceAsyncReload = function (value) {
-    $forceAsyncReloadEnabled = !(!value);
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#uniformLanguageTag
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate which language tag should be used as a result when determining
-   * the current browser language.
-   *
-   * This setting must be set before invoking {@link pascalprecht.translate.$translateProvider#methods_determinePreferredLanguage determinePreferredLanguage()}.
-   *
-   * <pre>
-   * $translateProvider
-   *   .uniformLanguageTag('bcp47')
-   *   .determinePreferredLanguage()
-   * </pre>
-   *
-   * The resolver currently supports:
-   * * default
-   *     (traditionally: hyphens will be converted into underscores, i.e. en-US => en_US)
-   *     en-US => en_US
-   *     en_US => en_US
-   *     en-us => en_us
-   * * java
-   *     like default, but the second part will be always in uppercase
-   *     en-US => en_US
-   *     en_US => en_US
-   *     en-us => en_US
-   * * BCP 47 (RFC 4646 & 4647)
-   *     en-US => en-US
-   *     en_US => en-US
-   *     en-us => en-US
-   *
-   * See also:
-   * * http://en.wikipedia.org/wiki/IETF_language_tag
-   * * http://www.w3.org/International/core/langtags/
-   * * http://tools.ietf.org/html/bcp47
-   *
-   * @param {string|object} options - options (or standard)
-   * @param {string} options.standard - valid values are 'default', 'bcp47', 'java'
-   */
-  this.uniformLanguageTag = function (options) {
-
-    if (!options) {
-      options = {};
-    } else if (angular.isString(options)) {
-      options = {
-        standard: options
-      };
-    }
-
-    uniformLanguageTagResolver = options.standard;
-
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#determinePreferredLanguage
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Tells angular-translate to try to determine on its own which language key
-   * to set as preferred language. When `fn` is given, angular-translate uses it
-   * to determine a language key, otherwise it uses the built-in `getLocale()`
-   * method.
-   *
-   * The `getLocale()` returns a language key in the format `[lang]_[country]` or
-   * `[lang]` depending on what the browser provides.
-   *
-   * Use this method at your own risk, since not all browsers return a valid
-   * locale (see {@link pascalprecht.translate.$translateProvider#methods_uniformLanguageTag uniformLanguageTag()}).
-   *
-   * @param {Function=} fn Function to determine a browser's locale
-   */
-  this.determinePreferredLanguage = function (fn) {
-
-    var locale = (fn && angular.isFunction(fn)) ? fn() : getLocale();
-
-    if (!$availableLanguageKeys.length) {
-      $preferredLanguage = locale;
-    } else {
-      $preferredLanguage = negotiateLocale(locale) || locale;
-    }
-
-    return this;
-  };
-
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#registerAvailableLanguageKeys
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Registers a set of language keys the app will work with. Use this method in
-   * combination with
-   * {@link pascalprecht.translate.$translateProvider#determinePreferredLanguage determinePreferredLanguage}.
-   * When available languages keys are registered, angular-translate
-   * tries to find the best fitting language key depending on the browsers locale,
-   * considering your language key convention.
-   *
-   * @param {object} languageKeys Array of language keys the your app will use
-   * @param {object=} aliases Alias map.
-   */
-  this.registerAvailableLanguageKeys = function (languageKeys, aliases) {
-    if (languageKeys) {
-      $availableLanguageKeys = languageKeys;
-      if (aliases) {
-        $languageKeyAliases = aliases;
+        if (!angular.isObject($translationTable[langKey])) {
+          $translationTable[langKey] = {};
+        }
+        angular.extend($translationTable[langKey], flatObject(translationTable));
       }
       return this;
-    }
-    return $availableLanguageKeys;
-  };
+    };
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#useLoaderCache
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Registers a cache for internal $http based loaders.
-   * {@link pascalprecht.translate.$translationCache $translationCache}.
-   * When false the cache will be disabled (default). When true or undefined
-   * the cache will be a default (see $cacheFactory). When an object it will
-   * be treat as a cache object itself: the usage is $http({cache: cache})
-   *
-   * @param {object} cache boolean, string or cache-object
-   */
-  this.useLoaderCache = function (cache) {
-    if (cache === false) {
-      // disable cache
-      loaderCache = undefined;
-    } else if (cache === true) {
-      // enable cache using AJS defaults
-      loaderCache = true;
-    } else if (typeof(cache) === 'undefined') {
-      // enable cache using default
-      loaderCache = '$translationCache';
-    } else if (cache) {
-      // enable cache using given one (see $cacheFactory)
-      loaderCache = cache;
-    }
-    return this;
-  };
+    this.translations = translations;
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#directivePriority
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Sets the default priority of the translate directive. The standard value is `0`.
-   * Calling this function without an argument will return the current value.
-   *
-   * @param {number} priority for the translate-directive
-   */
-  this.directivePriority = function (priority) {
-    if (priority === undefined) {
-      // getter
-      return directivePriority;
-    } else {
-      // setter with chaining
-      directivePriority = priority;
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#cloakClassName
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     *
+     * Let's you change the class name for `translate-cloak` directive.
+     * Default class name is `translate-cloak`.
+     *
+     * @param {string} name translate-cloak class name
+     */
+    this.cloakClassName = function (name) {
+      if (!name) {
+        return $cloakClassName;
+      }
+      $cloakClassName = name;
       return this;
-    }
-  };
+    };
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#statefulFilter
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * Since AngularJS 1.3, filters which are not stateless (depending at the scope)
-   * have to explicit define this behavior.
-   * Sets whether the translate filter should be stateful or stateless. The standard value is `true`
-   * meaning being stateful.
-   * Calling this function without an argument will return the current value.
-   *
-   * @param {boolean} state - defines the state of the filter
-   */
-  this.statefulFilter = function (state) {
-    if (state === undefined) {
-      // getter
-      return statefulFilter;
-    } else {
-      // setter with chaining
-      statefulFilter = state;
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#nestedObjectDelimeter
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     *
+     * Let's you change the delimiter for namespaced translations.
+     * Default delimiter is `.`.
+     *
+     * @param {string} delimiter namespace separator
+     */
+    this.nestedObjectDelimeter = function (delimiter) {
+      if (!delimiter) {
+        return $nestedObjectDelimeter;
+      }
+      $nestedObjectDelimeter = delimiter;
       return this;
-    }
-  };
+    };
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#postProcess
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * The post processor will be intercept right after the translation result. It can modify the result.
-   *
-   * @param {object} fn Function or service name (string) to be called after the translation value has been set / resolved. The function itself will enrich every value being processed and then continue the normal resolver process
-   */
-  this.postProcess = function (fn) {
-    if (fn) {
-      postProcessFn = fn;
-    } else {
-      postProcessFn = undefined;
-    }
-    return this;
-  };
+    /**
+     * @name flatObject
+     * @private
+     *
+     * @description
+     * Flats an object. This function is used to flatten given translation data with
+     * namespaces, so they are later accessible via dot notation.
+     */
+    var flatObject = function (data, path, result, prevKey) {
+      var key, keyWithPath, keyWithShortPath, val;
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateProvider#keepContent
-   * @methodOf pascalprecht.translate.$translateProvider
-   *
-   * @description
-   * If keepContent is set to true than translate directive will always use innerHTML
-   * as a default translation
-   *
-   * Example:
-   * <pre>
-   *  app.config(function ($translateProvider) {
-   *    $translateProvider.keepContent(true);
-   *  });
-   * </pre>
-   *
-   * @param {boolean} value - valid values are true or false
-   */
-  this.keepContent = function (value) {
-    $keepContent = !(!value);
-    return this;
-  };
+      if (!path) {
+        path = [];
+      }
+      if (!result) {
+        result = {};
+      }
+      for (key in data) {
+        if (!Object.prototype.hasOwnProperty.call(data, key)) {
+          continue;
+        }
+        val = data[key];
+        if (angular.isObject(val)) {
+          flatObject(val, path.concat(key), result, key);
+        } else {
+          keyWithPath = path.length ? ('' + path.join($nestedObjectDelimeter) + $nestedObjectDelimeter + key) : key;
+          if (path.length && key === prevKey) {
+            // Create shortcut path (foo.bar == foo.bar.bar)
+            keyWithShortPath = '' + path.join($nestedObjectDelimeter);
+            // Link it to original path
+            result[keyWithShortPath] = '@:' + keyWithPath;
+          }
+          result[keyWithPath] = val;
+        }
+      }
+      return result;
+    };
+    flatObject.displayName = 'flatObject';
 
-  /**
-   * @ngdoc object
-   * @name pascalprecht.translate.$translate
-   * @requires $interpolate
-   * @requires $log
-   * @requires $rootScope
-   * @requires $q
-   *
-   * @description
-   * The `$translate` service is the actual core of angular-translate. It expects a translation id
-   * and optional interpolate parameters to translate contents.
-   *
-   * <pre>
-   *  $translate('HEADLINE_TEXT').then(function (translation) {
-   *    $scope.translatedText = translation;
-   *  });
-   * </pre>
-   *
-   * @param {string|array} translationId A token which represents a translation id
-   *                                     This can be optionally an array of translation ids which
-   *                                     results that the function returns an object where each key
-   *                                     is the translation id and the value the translation.
-   * @param {object=} interpolateParams An object hash for dynamic values
-   * @param {string} interpolationId The id of the interpolation to use
-   * @param {string} defaultTranslationText the optional default translation text that is written as
-   *                                        as default text in case it is not found in any configured language
-   * @param {string} forceLanguage A language to be used instead of the current language
-   * @returns {object} promise
-   */
-  this.$get = [
-    '$log',
-    '$injector',
-    '$rootScope',
-    '$q',
-    function ($log, $injector, $rootScope, $q) {
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#addInterpolation
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Adds interpolation services to angular-translate, so it can manage them.
+     *
+     * @param {object} factory Interpolation service factory
+     */
+    this.addInterpolation = function (factory) {
+      $interpolatorFactories.push(factory);
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useMessageFormatInterpolation
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use interpolation functionality of messageformat.js.
+     * This is useful when having high level pluralization and gender selection.
+     */
+    this.useMessageFormatInterpolation = function () {
+      return this.useInterpolation('$translateMessageFormatInterpolation');
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useInterpolation
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate which interpolation style to use as default, application-wide.
+     * Simply pass a factory/service name. The interpolation service has to implement
+     * the correct interface.
+     *
+     * @param {string} factory Interpolation service name.
+     */
+    this.useInterpolation = function (factory) {
+      $interpolationFactory = factory;
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useSanitizeStrategy
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Simply sets a sanitation strategy type.
+     *
+     * @param {string} value Strategy type.
+     */
+    this.useSanitizeValueStrategy = function (value) {
+      $translateSanitizationProvider.useStrategy(value);
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#preferredLanguage
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells the module which of the registered translation tables to use for translation
+     * at initial startup by passing a language key. Similar to `$translateProvider#use`
+     * only that it says which language to **prefer**.
+     * It is recommended to call this after {@link pascalprecht.translate.$translate#fallbackLanguage fallbackLanguage()}.
+     *
+     * @param {string} langKey A language key.
+     */
+    this.preferredLanguage = function (langKey) {
+      if (langKey) {
+        setupPreferredLanguage(langKey);
+        return this;
+      }
+      return $preferredLanguage;
+    };
+    var setupPreferredLanguage = function (langKey) {
+      if (langKey) {
+        $preferredLanguage = langKey;
+      }
+      return $preferredLanguage;
+    };
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#translationNotFoundIndicator
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Sets an indicator which is used when a translation isn't found. E.g. when
+     * setting the indicator as 'X' and one tries to translate a translation id
+     * called `NOT_FOUND`, this will result in `X NOT_FOUND X`.
+     *
+     * Internally this methods sets a left indicator and a right indicator using
+     * `$translateProvider.translationNotFoundIndicatorLeft()` and
+     * `$translateProvider.translationNotFoundIndicatorRight()`.
+     *
+     * **Note**: These methods automatically add a whitespace between the indicators
+     * and the translation id.
+     *
+     * @param {string} indicator An indicator, could be any string.
+     */
+    this.translationNotFoundIndicator = function (indicator) {
+      this.translationNotFoundIndicatorLeft(indicator);
+      this.translationNotFoundIndicatorRight(indicator);
+      return this;
+    };
+
+    /**
+     * ngdoc function
+     * @name pascalprecht.translate.$translateProvider#translationNotFoundIndicatorLeft
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Sets an indicator which is used when a translation isn't found left to the
+     * translation id.
+     *
+     * @param {string} indicator An indicator.
+     */
+    this.translationNotFoundIndicatorLeft = function (indicator) {
+      if (!indicator) {
+        return $notFoundIndicatorLeft;
+      }
+      $notFoundIndicatorLeft = indicator;
+      return this;
+    };
+
+    /**
+     * ngdoc function
+     * @name pascalprecht.translate.$translateProvider#translationNotFoundIndicatorLeft
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Sets an indicator which is used when a translation isn't found right to the
+     * translation id.
+     *
+     * @param {string} indicator An indicator.
+     */
+    this.translationNotFoundIndicatorRight = function (indicator) {
+      if (!indicator) {
+        return $notFoundIndicatorRight;
+      }
+      $notFoundIndicatorRight = indicator;
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#fallbackLanguage
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells the module which of the registered translation tables to use when missing translations
+     * at initial startup by passing a language key. Similar to `$translateProvider#use`
+     * only that it says which language to **fallback**.
+     *
+     * @param {string||array} langKey A language key.
+     *
+     */
+    this.fallbackLanguage = function (langKey) {
+      fallbackStack(langKey);
+      return this;
+    };
+
+    var fallbackStack = function (langKey) {
+      if (langKey) {
+        if (angular.isString(langKey)) {
+          $fallbackWasString = true;
+          $fallbackLanguage = [langKey];
+        } else if (angular.isArray(langKey)) {
+          $fallbackWasString = false;
+          $fallbackLanguage = langKey;
+        }
+        if (angular.isString($preferredLanguage) && indexOf($fallbackLanguage, $preferredLanguage) < 0) {
+          $fallbackLanguage.push($preferredLanguage);
+        }
+
+        return this;
+      } else {
+        if ($fallbackWasString) {
+          return $fallbackLanguage[0];
+        } else {
+          return $fallbackLanguage;
+        }
+      }
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#use
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Set which translation table to use for translation by given language key. When
+     * trying to 'use' a language which isn't provided, it'll throw an error.
+     *
+     * You actually don't have to use this method since `$translateProvider#preferredLanguage`
+     * does the job too.
+     *
+     * @param {string} langKey A language key.
+     */
+    this.use = function (langKey) {
+      if (langKey) {
+        if (!$translationTable[langKey] && (!$loaderFactory)) {
+          // only throw an error, when not loading translation data asynchronously
+          throw new Error('$translateProvider couldn\'t find translationTable for langKey: \'' + langKey + '\'');
+        }
+        $uses = langKey;
+        return this;
+      }
+      return $uses;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#resolveClientLocale
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * This returns the current browser/client's language key. The result is processed with the configured uniform tag resolver.
+     *
+     * @returns {string} the current client/browser language key
+     */
+    this.resolveClientLocale = function () {
+      return getLocale();
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#storageKey
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells the module which key must represent the choosed language by a user in the storage.
+     *
+     * @param {string} key A key for the storage.
+     */
+    var storageKey = function (key) {
+      if (!key) {
+        if ($storagePrefix) {
+          return $storagePrefix + $storageKey;
+        }
+        return $storageKey;
+      }
+      $storageKey = key;
+      return this;
+    };
+
+    this.storageKey = storageKey;
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useUrlLoader
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use `$translateUrlLoader` extension service as loader.
+     *
+     * @param {string} url Url
+     * @param {Object=} options Optional configuration object
+     */
+    this.useUrlLoader = function (url, options) {
+      return this.useLoader('$translateUrlLoader', angular.extend({url : url}, options));
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useStaticFilesLoader
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use `$translateStaticFilesLoader` extension service as loader.
+     *
+     * @param {Object=} options Optional configuration object
+     */
+    this.useStaticFilesLoader = function (options) {
+      return this.useLoader('$translateStaticFilesLoader', options);
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useLoader
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use any other service as loader.
+     *
+     * @param {string} loaderFactory Factory name to use
+     * @param {Object=} options Optional configuration object
+     */
+    this.useLoader = function (loaderFactory, options) {
+      $loaderFactory = loaderFactory;
+      $loaderOptions = options || {};
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useLocalStorage
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use `$translateLocalStorage` service as storage layer.
+     *
+     */
+    this.useLocalStorage = function () {
+      return this.useStorage('$translateLocalStorage');
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useCookieStorage
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use `$translateCookieStorage` service as storage layer.
+     */
+    this.useCookieStorage = function () {
+      return this.useStorage('$translateCookieStorage');
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useStorage
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use custom service as storage layer.
+     */
+    this.useStorage = function (storageFactory) {
+      $storageFactory = storageFactory;
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#storagePrefix
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Sets prefix for storage key.
+     *
+     * @param {string} prefix Storage key prefix
+     */
+    this.storagePrefix = function (prefix) {
+      if (!prefix) {
+        return prefix;
+      }
+      $storagePrefix = prefix;
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useMissingTranslationHandlerLog
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to use built-in log handler when trying to translate
+     * a translation Id which doesn't exist.
+     *
+     * This is actually a shortcut method for `useMissingTranslationHandler()`.
+     *
+     */
+    this.useMissingTranslationHandlerLog = function () {
+      return this.useMissingTranslationHandler('$translateMissingTranslationHandlerLog');
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useMissingTranslationHandler
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Expects a factory name which later gets instantiated with `$injector`.
+     * This method can be used to tell angular-translate to use a custom
+     * missingTranslationHandler. Just build a factory which returns a function
+     * and expects a translation id as argument.
+     *
+     * Example:
+     * <pre>
+     *  app.config(function ($translateProvider) {
+     *    $translateProvider.useMissingTranslationHandler('customHandler');
+     *  });
+     *
+     *  app.factory('customHandler', function (dep1, dep2) {
+     *    return function (translationId) {
+     *      // something with translationId and dep1 and dep2
+     *    };
+     *  });
+     * </pre>
+     *
+     * @param {string} factory Factory name
+     */
+    this.useMissingTranslationHandler = function (factory) {
+      $missingTranslationHandlerFactory = factory;
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#usePostCompiling
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * If post compiling is enabled, all translated values will be processed
+     * again with AngularJS' $compile.
+     *
+     * Example:
+     * <pre>
+     *  app.config(function ($translateProvider) {
+     *    $translateProvider.usePostCompiling(true);
+     *  });
+     * </pre>
+     *
+     * @param {string} factory Factory name
+     */
+    this.usePostCompiling = function (value) {
+      $postCompilingEnabled = !(!value);
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#forceAsyncReload
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * If force async reload is enabled, async loader will always be called
+     * even if $translationTable already contains the language key, adding
+     * possible new entries to the $translationTable.
+     *
+     * Example:
+     * <pre>
+     *  app.config(function ($translateProvider) {
+     *    $translateProvider.forceAsyncReload(true);
+     *  });
+     * </pre>
+     *
+     * @param {boolean} value - valid values are true or false
+     */
+    this.forceAsyncReload = function (value) {
+      $forceAsyncReloadEnabled = !(!value);
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#uniformLanguageTag
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate which language tag should be used as a result when determining
+     * the current browser language.
+     *
+     * This setting must be set before invoking {@link pascalprecht.translate.$translateProvider#methods_determinePreferredLanguage determinePreferredLanguage()}.
+     *
+     * <pre>
+     * $translateProvider
+     *   .uniformLanguageTag('bcp47')
+     *   .determinePreferredLanguage()
+     * </pre>
+     *
+     * The resolver currently supports:
+     * * default
+     *     (traditionally: hyphens will be converted into underscores, i.e. en-US => en_US)
+     *     en-US => en_US
+     *     en_US => en_US
+     *     en-us => en_us
+     * * java
+     *     like default, but the second part will be always in uppercase
+     *     en-US => en_US
+     *     en_US => en_US
+     *     en-us => en_US
+     * * BCP 47 (RFC 4646 & 4647)
+     *     EN => en
+     *     en-US => en-US
+     *     en_US => en-US
+     *     en-us => en-US
+     *     sr-latn => sr-Latn
+     *     sr-latn-rs => sr-Latn-RS
+     *
+     * See also:
+     * * http://en.wikipedia.org/wiki/IETF_language_tag
+     * * http://www.w3.org/International/core/langtags/
+     * * http://tools.ietf.org/html/bcp47
+     *
+     * @param {string|object} options - options (or standard)
+     * @param {string} options.standard - valid values are 'default', 'bcp47', 'java'
+     */
+    this.uniformLanguageTag = function (options) {
+
+      if (!options) {
+        options = {};
+      } else if (angular.isString(options)) {
+        options = {
+          standard : options
+        };
+      }
+
+      uniformLanguageTagResolver = options.standard;
+
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#determinePreferredLanguage
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Tells angular-translate to try to determine on its own which language key
+     * to set as preferred language. When `fn` is given, angular-translate uses it
+     * to determine a language key, otherwise it uses the built-in `getLocale()`
+     * method.
+     *
+     * The `getLocale()` returns a language key in the format `[lang]_[country]` or
+     * `[lang]` depending on what the browser provides.
+     *
+     * Use this method at your own risk, since not all browsers return a valid
+     * locale (see {@link pascalprecht.translate.$translateProvider#methods_uniformLanguageTag uniformLanguageTag()}).
+     *
+     * @param {Function=} fn Function to determine a browser's locale
+     */
+    this.determinePreferredLanguage = function (fn) {
+
+      var locale = (fn && angular.isFunction(fn)) ? fn() : getLocale();
+
+      if (!$availableLanguageKeys.length) {
+        $preferredLanguage = locale;
+      } else {
+        $preferredLanguage = negotiateLocale(locale) || locale;
+      }
+
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#registerAvailableLanguageKeys
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Registers a set of language keys the app will work with. Use this method in
+     * combination with
+     * {@link pascalprecht.translate.$translateProvider#determinePreferredLanguage determinePreferredLanguage}.
+     * When available languages keys are registered, angular-translate
+     * tries to find the best fitting language key depending on the browsers locale,
+     * considering your language key convention.
+     *
+     * @param {object} languageKeys Array of language keys the your app will use
+     * @param {object=} aliases Alias map.
+     */
+    this.registerAvailableLanguageKeys = function (languageKeys, aliases) {
+      if (languageKeys) {
+        $availableLanguageKeys = languageKeys;
+        if (aliases) {
+          $languageKeyAliases = aliases;
+        }
+        return this;
+      }
+      return $availableLanguageKeys;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#useLoaderCache
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Registers a cache for internal $http based loaders.
+     * {@link pascalprecht.translate.$translationCache $translationCache}.
+     * When false the cache will be disabled (default). When true or undefined
+     * the cache will be a default (see $cacheFactory). When an object it will
+     * be treat as a cache object itself: the usage is $http({cache: cache})
+     *
+     * @param {object} cache boolean, string or cache-object
+     */
+    this.useLoaderCache = function (cache) {
+      if (cache === false) {
+        // disable cache
+        loaderCache = undefined;
+      } else if (cache === true) {
+        // enable cache using AJS defaults
+        loaderCache = true;
+      } else if (typeof(cache) === 'undefined') {
+        // enable cache using default
+        loaderCache = '$translationCache';
+      } else if (cache) {
+        // enable cache using given one (see $cacheFactory)
+        loaderCache = cache;
+      }
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#directivePriority
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Sets the default priority of the translate directive. The standard value is `0`.
+     * Calling this function without an argument will return the current value.
+     *
+     * @param {number} priority for the translate-directive
+     */
+    this.directivePriority = function (priority) {
+      if (priority === undefined) {
+        // getter
+        return directivePriority;
+      } else {
+        // setter with chaining
+        directivePriority = priority;
+        return this;
+      }
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#statefulFilter
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * Since AngularJS 1.3, filters which are not stateless (depending at the scope)
+     * have to explicit define this behavior.
+     * Sets whether the translate filter should be stateful or stateless. The standard value is `true`
+     * meaning being stateful.
+     * Calling this function without an argument will return the current value.
+     *
+     * @param {boolean} state - defines the state of the filter
+     */
+    this.statefulFilter = function (state) {
+      if (state === undefined) {
+        // getter
+        return statefulFilter;
+      } else {
+        // setter with chaining
+        statefulFilter = state;
+        return this;
+      }
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#postProcess
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * The post processor will be intercept right after the translation result. It can modify the result.
+     *
+     * @param {object} fn Function or service name (string) to be called after the translation value has been set / resolved. The function itself will enrich every value being processed and then continue the normal resolver process
+     */
+    this.postProcess = function (fn) {
+      if (fn) {
+        postProcessFn = fn;
+      } else {
+        postProcessFn = undefined;
+      }
+      return this;
+    };
+
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateProvider#keepContent
+     * @methodOf pascalprecht.translate.$translateProvider
+     *
+     * @description
+     * If keepContent is set to true than translate directive will always use innerHTML
+     * as a default translation
+     *
+     * Example:
+     * <pre>
+     *  app.config(function ($translateProvider) {
+     *    $translateProvider.keepContent(true);
+     *  });
+     * </pre>
+     *
+     * @param {boolean} value - valid values are true or false
+     */
+    this.keepContent = function (value) {
+      $keepContent = !(!value);
+      return this;
+    };
+
+    /**
+     * @ngdoc object
+     * @name pascalprecht.translate.$translate
+     * @requires $interpolate
+     * @requires $log
+     * @requires $rootScope
+     * @requires $q
+     *
+     * @description
+     * The `$translate` service is the actual core of angular-translate. It expects a translation id
+     * and optional interpolate parameters to translate contents.
+     *
+     * <pre>
+     *  $translate('HEADLINE_TEXT').then(function (translation) {
+     *    $scope.translatedText = translation;
+     *  });
+     * </pre>
+     *
+     * @param {string|array} translationId A token which represents a translation id
+     *                                     This can be optionally an array of translation ids which
+     *                                     results that the function returns an object where each key
+     *                                     is the translation id and the value the translation.
+     * @param {object=} [interpolateParams={}] An object hash for dynamic values
+     * @param {string=} [interpolationId=undefined] The id of the interpolation to use (use default unless set via useInterpolation())
+     * @param {string=} [defaultTranslationText=undefined] the optional default translation text that is written as
+     *                                        as default text in case it is not found in any configured language
+     * @param {string=} [forceLanguage=false] A language to be used instead of the current language
+     * @param {string=} [sanitizeStrategy=undefined] force sanitize strategy for this call instead of using the configured one (use default unless set)
+     * @returns {object} promise
+     */
+    this.$get = ['$log', '$injector', '$rootScope', '$q', function ($log, $injector, $rootScope, $q) {
 
       var Storage,
-          defaultInterpolator = $injector.get($interpolationFactory || '$translateDefaultInterpolation'),
-          pendingLoader = false,
-          interpolatorHashMap = {},
-          langPromises = {},
-          fallbackIndex,
-          startFallbackIteration;
+        defaultInterpolator = $injector.get($interpolationFactory || '$translateDefaultInterpolation'),
+        pendingLoader = false,
+        interpolatorHashMap = {},
+        langPromises = {},
+        fallbackIndex,
+        startFallbackIteration;
 
-      var $translate = function (translationId, interpolateParams, interpolationId, defaultTranslationText, forceLanguage) {
+      var $translate = function (translationId, interpolateParams, interpolationId, defaultTranslationText, forceLanguage, sanitizeStrategy) {
         if (!$uses && $preferredLanguage) {
           $uses = $preferredLanguage;
         }
         var uses = (forceLanguage && forceLanguage !== $uses) ? // we don't want to re-negotiate $uses
-              (negotiateLocale(forceLanguage) || forceLanguage) : $uses;
+          (negotiateLocale(forceLanguage) || forceLanguage) : $uses;
 
         // Check forceLanguage is present
         if (forceLanguage) {
@@ -1470,7 +1510,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
                 deferred.resolve([translationId, value]);
               };
               // we don't care whether the promise was resolved or rejected; just store the values
-              $translate(translationId, interpolateParams, interpolationId, defaultTranslationText, forceLanguage).then(regardless, regardless);
+              $translate(translationId, interpolateParams, interpolationId, defaultTranslationText, forceLanguage, sanitizeStrategy).then(regardless, regardless);
               return deferred.promise;
             };
             for (var i = 0, c = translationIds.length; i < c; i++) {
@@ -1490,12 +1530,12 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         // trim off any whitespace
         if (translationId) {
           translationId = trim.apply(translationId);
+        } else {
+          throw new TypeError('translationId must be a not empty string');
         }
 
         var promiseToWaitFor = (function () {
-          var promise = $preferredLanguage ?
-            langPromises[$preferredLanguage] :
-            langPromises[uses];
+          var promise = langPromises[uses] || langPromises[$preferredLanguage];
 
           fallbackIndex = 0;
 
@@ -1507,17 +1547,17 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
             promise = langPromises[langKey];
 
             if ($fallbackLanguage && $fallbackLanguage.length) {
-                var index = indexOf($fallbackLanguage, langKey);
-                // maybe the language from storage is also defined as fallback language
-                // we increase the fallback language index to not search in that language
-                // as fallback, since it's probably the first used language
-                // in that case the index starts after the first element
-                fallbackIndex = (index === 0) ? 1 : 0;
+              var index = indexOf($fallbackLanguage, langKey);
+              // maybe the language from storage is also defined as fallback language
+              // we increase the fallback language index to not search in that language
+              // as fallback, since it's probably the first used language
+              // in that case the index starts after the first element
+              fallbackIndex = (index === 0) ? 1 : 0;
 
-                // but we can make sure to ALWAYS fallback to preferred language at least
-                if (indexOf($fallbackLanguage, $preferredLanguage) < 0) {
-                  $fallbackLanguage.push($preferredLanguage);
-                }
+              // but we can make sure to ALWAYS fallback to preferred language at least
+              if (indexOf($fallbackLanguage, $preferredLanguage) < 0) {
+                $fallbackLanguage.push($preferredLanguage);
+              }
             }
           }
           return promise;
@@ -1527,18 +1567,18 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           // no promise to wait for? okay. Then there's no loader registered
           // nor is a one pending for language that comes from storage.
           // We can just translate.
-          determineTranslation(translationId, interpolateParams, interpolationId, defaultTranslationText, uses).then(deferred.resolve, deferred.reject);
+          determineTranslation(translationId, interpolateParams, interpolationId, defaultTranslationText, uses, sanitizeStrategy).then(deferred.resolve, deferred.reject);
         } else {
           var promiseResolved = function () {
             // $uses may have changed while waiting
             if (!forceLanguage) {
               uses = $uses;
             }
-            determineTranslation(translationId, interpolateParams, interpolationId, defaultTranslationText, uses).then(deferred.resolve, deferred.reject);
+            determineTranslation(translationId, interpolateParams, interpolationId, defaultTranslationText, uses, sanitizeStrategy).then(deferred.resolve, deferred.reject);
           };
           promiseResolved.displayName = 'promiseResolved';
 
-          promiseToWaitFor['finally'](promiseResolved);
+          promiseToWaitFor['finally'](promiseResolved)['catch'](angular.noop); // we don't care about errors here, already handled
         }
         return deferred.promise;
       };
@@ -1586,7 +1626,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           Storage.put($translate.storageKey(), $uses);
         }
 
-        $rootScope.$emit('$translateChangeSuccess', {language: key});
+        $rootScope.$emit('$translateChangeSuccess', {language : key});
 
         // inform default interpolator
         defaultInterpolator.setLocale($uses);
@@ -1598,7 +1638,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
 
         // inform all others too!
         angular.forEach(interpolatorHashMap, eachInterpolator);
-        $rootScope.$emit('$translateChangeEnd', {language: key});
+        $rootScope.$emit('$translateChangeEnd', {language : key});
       };
 
       /**
@@ -1606,7 +1646,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @private
        *
        * @description
-       * Kicks of registered async loader using `$injector` and applies existing
+       * Kicks off registered async loader using `$injector` and applies existing
        * loader options. When resolved, it updates translation tables accordingly
        * or rejects with given language key.
        *
@@ -1620,7 +1660,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
 
         var deferred = $q.defer();
 
-        $rootScope.$emit('$translateLoadingStart', {language: key});
+        $rootScope.$emit('$translateLoadingStart', {language : key});
         pendingLoader = true;
 
         var cache = loaderCache;
@@ -1630,15 +1670,15 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         }
 
         var loaderOptions = angular.extend({}, $loaderOptions, {
-          key: key,
-          $http: angular.extend({}, {
-            cache: cache
+          key : key,
+          $http : angular.extend({}, {
+            cache : cache
           }, $loaderOptions.$http)
         });
 
         var onLoaderSuccess = function (data) {
           var translationTable = {};
-          $rootScope.$emit('$translateLoadingSuccess', {language: key});
+          $rootScope.$emit('$translateLoadingSuccess', {language : key});
 
           if (angular.isArray(data)) {
             angular.forEach(data, function (table) {
@@ -1649,17 +1689,17 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           }
           pendingLoader = false;
           deferred.resolve({
-            key: key,
-            table: translationTable
+            key : key,
+            table : translationTable
           });
-          $rootScope.$emit('$translateLoadingEnd', {language: key});
+          $rootScope.$emit('$translateLoadingEnd', {language : key});
         };
         onLoaderSuccess.displayName = 'onLoaderSuccess';
 
         var onLoaderError = function (key) {
-          $rootScope.$emit('$translateLoadingError', {language: key});
+          $rootScope.$emit('$translateLoadingError', {language : key});
           deferred.reject(key);
-          $rootScope.$emit('$translateLoadingEnd', {language: key});
+          $rootScope.$emit('$translateLoadingEnd', {language : key});
         };
         onLoaderError.displayName = 'onLoaderError';
 
@@ -1733,20 +1773,21 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @param translationId
        * @param interpolateParams
        * @param Interpolator
+       * @param sanitizeStrategy
        * @returns {Q.promise}
        */
-      var getFallbackTranslation = function (langKey, translationId, interpolateParams, Interpolator) {
+      var getFallbackTranslation = function (langKey, translationId, interpolateParams, Interpolator, sanitizeStrategy) {
         var deferred = $q.defer();
 
         var onResolve = function (translationTable) {
-          if (Object.prototype.hasOwnProperty.call(translationTable, translationId)) {
+          if (Object.prototype.hasOwnProperty.call(translationTable, translationId) && translationTable[translationId] !== null) {
             Interpolator.setLocale(langKey);
             var translation = translationTable[translationId];
             if (translation.substr(0, 2) === '@:') {
-              getFallbackTranslation(langKey, translation.substr(2), interpolateParams, Interpolator)
+              getFallbackTranslation(langKey, translation.substr(2), interpolateParams, Interpolator, sanitizeStrategy)
                 .then(deferred.resolve, deferred.reject);
             } else {
-              var interpolatedValue = Interpolator.interpolate(translationTable[translationId], interpolateParams, 'service');
+              var interpolatedValue = Interpolator.interpolate(translationTable[translationId], interpolateParams, 'service', sanitizeStrategy, translationId);
               interpolatedValue = applyPostProcessing(translationId, translationTable[translationId], interpolatedValue, interpolateParams, langKey);
 
               deferred.resolve(interpolatedValue);
@@ -1776,17 +1817,25 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @param translationId
        * @param interpolateParams
        * @param Interpolator
+       * @param sanitizeStrategy sanitize strategy override
+       *
        * @returns {string} translation
        */
-      var getFallbackTranslationInstant = function (langKey, translationId, interpolateParams, Interpolator) {
+      var getFallbackTranslationInstant = function (langKey, translationId, interpolateParams, Interpolator, sanitizeStrategy) {
         var result, translationTable = $translationTable[langKey];
 
-        if (translationTable && Object.prototype.hasOwnProperty.call(translationTable, translationId)) {
+        if (translationTable && Object.prototype.hasOwnProperty.call(translationTable, translationId) && translationTable[translationId] !== null) {
           Interpolator.setLocale(langKey);
-          result = Interpolator.interpolate(translationTable[translationId], interpolateParams, 'filter');
-          result = applyPostProcessing(translationId, translationTable[translationId], result, interpolateParams, langKey);
-          if (result.substr(0, 2) === '@:') {
-            return getFallbackTranslationInstant(langKey, result.substr(2), interpolateParams, Interpolator);
+          result = Interpolator.interpolate(translationTable[translationId], interpolateParams, 'filter', sanitizeStrategy, translationId);
+          result = applyPostProcessing(translationId, translationTable[translationId], result, interpolateParams, langKey, sanitizeStrategy);
+          // workaround for TrustedValueHolderType
+          if (!angular.isString(result) && angular.isFunction(result.$$unwrapTrustedValue)) {
+            var result2 = result.$$unwrapTrustedValue();
+            if (result2.substr(0, 2) === '@:') {
+              return getFallbackTranslationInstant(langKey, result2.substr(2), interpolateParams, Interpolator, sanitizeStrategy);
+            }
+          } else if (result.substr(0, 2) === '@:') {
+            return getFallbackTranslationInstant(langKey, result.substr(2), interpolateParams, Interpolator, sanitizeStrategy);
           }
           Interpolator.setLocale($uses);
         }
@@ -1804,19 +1853,16 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @param translationId
        * @param interpolateParams
        * @param defaultTranslationText
+       * @param sanitizeStrategy sanitize strategy override
+       *
        * @returns translation created by $missingTranslationHandler or translationId is $missingTranslationHandler is
        * absent
        */
-      var translateByHandler = function (translationId, interpolateParams, defaultTranslationText) {
+      var translateByHandler = function (translationId, interpolateParams, defaultTranslationText, sanitizeStrategy) {
         // If we have a handler factory - we might also call it here to determine if it provides
         // a default text for a translationid that can't be found anywhere in our tables
         if ($missingTranslationHandlerFactory) {
-          var resultString = $injector.get($missingTranslationHandlerFactory)(translationId, $uses, interpolateParams, defaultTranslationText);
-          if (resultString !== undefined) {
-            return resultString;
-          } else {
-            return translationId;
-          }
+          return $injector.get($missingTranslationHandlerFactory)(translationId, $uses, interpolateParams, defaultTranslationText, sanitizeStrategy);
         } else {
           return translationId;
         }
@@ -1833,21 +1879,23 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @param translationId
        * @param interpolateParams
        * @param Interpolator
+       * @param defaultTranslationText
+       * @param sanitizeStrategy
        * @returns {Q.promise} Promise that will resolve to the translation.
        */
-      var resolveForFallbackLanguage = function (fallbackLanguageIndex, translationId, interpolateParams, Interpolator, defaultTranslationText) {
+      var resolveForFallbackLanguage = function (fallbackLanguageIndex, translationId, interpolateParams, Interpolator, defaultTranslationText, sanitizeStrategy) {
         var deferred = $q.defer();
 
         if (fallbackLanguageIndex < $fallbackLanguage.length) {
           var langKey = $fallbackLanguage[fallbackLanguageIndex];
-          getFallbackTranslation(langKey, translationId, interpolateParams, Interpolator).then(
+          getFallbackTranslation(langKey, translationId, interpolateParams, Interpolator, sanitizeStrategy).then(
             function (data) {
-                deferred.resolve(data);
+              deferred.resolve(data);
             },
             function () {
               // Look in the next fallback language for a translation.
               // It delays the resolving by passing another promise to resolve.
-              return resolveForFallbackLanguage(fallbackLanguageIndex + 1, translationId, interpolateParams, Interpolator, defaultTranslationText).then(deferred.resolve, deferred.reject);
+              return resolveForFallbackLanguage(fallbackLanguageIndex + 1, translationId, interpolateParams, Interpolator, defaultTranslationText, sanitizeStrategy).then(deferred.resolve, deferred.reject);
             }
           );
         } else {
@@ -1856,14 +1904,15 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           if (defaultTranslationText) {
             deferred.resolve(defaultTranslationText);
           } else {
-            // if no default translation is set and an error handler is defined, send it to the handler
-            // and then return the result
-            if ($missingTranslationHandlerFactory) {
-              deferred.resolve(translateByHandler(translationId, interpolateParams));
-            } else {
-              deferred.reject(translateByHandler(translationId, interpolateParams));
-            }
+            var missingTranslationHandlerTranslation = translateByHandler(translationId, interpolateParams, defaultTranslationText);
 
+            // if no default translation is set and an error handler is defined, send it to the handler
+            // and then return the result if it isn't undefined
+            if ($missingTranslationHandlerFactory && missingTranslationHandlerTranslation) {
+              deferred.resolve(missingTranslationHandlerTranslation);
+            } else {
+              deferred.reject(applyNotFoundIndicators(translationId));
+            }
           }
         }
         return deferred.promise;
@@ -1880,15 +1929,16 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @param translationId
        * @param interpolateParams
        * @param Interpolator
+       * @param sanitizeStrategy
        * @returns {string} translation
        */
-      var resolveForFallbackLanguageInstant = function (fallbackLanguageIndex, translationId, interpolateParams, Interpolator) {
+      var resolveForFallbackLanguageInstant = function (fallbackLanguageIndex, translationId, interpolateParams, Interpolator, sanitizeStrategy) {
         var result;
 
         if (fallbackLanguageIndex < $fallbackLanguage.length) {
           var langKey = $fallbackLanguage[fallbackLanguageIndex];
-          result = getFallbackTranslationInstant(langKey, translationId, interpolateParams, Interpolator);
-          if (!result) {
+          result = getFallbackTranslationInstant(langKey, translationId, interpolateParams, Interpolator, sanitizeStrategy);
+          if (!result && result !== '') {
             result = resolveForFallbackLanguageInstant(fallbackLanguageIndex + 1, translationId, interpolateParams, Interpolator);
           }
         }
@@ -1901,11 +1951,13 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @param translationId
        * @param interpolateParams
        * @param Interpolator
+       * @param defaultTranslationText
+       * @param sanitizeStrategy
        * @returns {Q.promise} Promise, that resolves to the translation.
        */
-      var fallbackTranslation = function (translationId, interpolateParams, Interpolator, defaultTranslationText) {
+      var fallbackTranslation = function (translationId, interpolateParams, Interpolator, defaultTranslationText, sanitizeStrategy) {
         // Start with the fallbackLanguage with index 0
-        return resolveForFallbackLanguage((startFallbackIteration>0 ? startFallbackIteration : fallbackIndex), translationId, interpolateParams, Interpolator, defaultTranslationText);
+        return resolveForFallbackLanguage((startFallbackIteration > 0 ? startFallbackIteration : fallbackIndex), translationId, interpolateParams, Interpolator, defaultTranslationText, sanitizeStrategy);
       };
 
       /**
@@ -1914,32 +1966,33 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @param translationId
        * @param interpolateParams
        * @param Interpolator
+       * @param sanitizeStrategy
        * @returns {String} translation
        */
-      var fallbackTranslationInstant = function (translationId, interpolateParams, Interpolator) {
+      var fallbackTranslationInstant = function (translationId, interpolateParams, Interpolator, sanitizeStrategy) {
         // Start with the fallbackLanguage with index 0
-        return resolveForFallbackLanguageInstant((startFallbackIteration>0 ? startFallbackIteration : fallbackIndex), translationId, interpolateParams, Interpolator);
+        return resolveForFallbackLanguageInstant((startFallbackIteration > 0 ? startFallbackIteration : fallbackIndex), translationId, interpolateParams, Interpolator, sanitizeStrategy);
       };
 
-      var determineTranslation = function (translationId, interpolateParams, interpolationId, defaultTranslationText, uses) {
+      var determineTranslation = function (translationId, interpolateParams, interpolationId, defaultTranslationText, uses, sanitizeStrategy) {
 
         var deferred = $q.defer();
 
         var table = uses ? $translationTable[uses] : $translationTable,
-            Interpolator = (interpolationId) ? interpolatorHashMap[interpolationId] : defaultInterpolator;
+          Interpolator = (interpolationId) ? interpolatorHashMap[interpolationId] : defaultInterpolator;
 
         // if the translation id exists, we can just interpolate it
-        if (table && Object.prototype.hasOwnProperty.call(table, translationId)) {
+        if (table && Object.prototype.hasOwnProperty.call(table, translationId) && table[translationId] !== null) {
           var translation = table[translationId];
 
           // If using link, rerun $translate with linked translationId and return it
           if (translation.substr(0, 2) === '@:') {
 
-            $translate(translation.substr(2), interpolateParams, interpolationId, defaultTranslationText, uses)
+            $translate(translation.substr(2), interpolateParams, interpolationId, defaultTranslationText, uses, sanitizeStrategy)
               .then(deferred.resolve, deferred.reject);
           } else {
             //
-            var resolvedTranslation = Interpolator.interpolate(translation, interpolateParams, 'service');
+            var resolvedTranslation = Interpolator.interpolate(translation, interpolateParams, 'service', sanitizeStrategy, translationId);
             resolvedTranslation = applyPostProcessing(translationId, translation, resolvedTranslation, interpolateParams, uses);
             deferred.resolve(resolvedTranslation);
           }
@@ -1954,21 +2007,21 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           // we try it now with one or more fallback languages, if fallback language(s) is
           // configured.
           if (uses && $fallbackLanguage && $fallbackLanguage.length) {
-            fallbackTranslation(translationId, interpolateParams, Interpolator, defaultTranslationText)
-                .then(function (translation) {
-                  deferred.resolve(translation);
-                }, function (_translationId) {
-                  deferred.reject(applyNotFoundIndicators(_translationId));
-                });
+            fallbackTranslation(translationId, interpolateParams, Interpolator, defaultTranslationText, sanitizeStrategy)
+              .then(function (translation) {
+                deferred.resolve(translation);
+              }, function (_translationId) {
+                deferred.reject(applyNotFoundIndicators(_translationId));
+              });
           } else if ($missingTranslationHandlerFactory && !pendingLoader && missingTranslationHandlerTranslation) {
             // looks like the requested translation id doesn't exists.
             // Now, if there is a registered handler for missing translations and no
             // asyncLoader is pending, we execute the handler
             if (defaultTranslationText) {
               deferred.resolve(defaultTranslationText);
-              } else {
-                deferred.resolve(missingTranslationHandlerTranslation);
-              }
+            } else {
+              deferred.resolve(missingTranslationHandlerTranslation);
+            }
           } else {
             if (defaultTranslationText) {
               deferred.resolve(defaultTranslationText);
@@ -1980,10 +2033,10 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         return deferred.promise;
       };
 
-      var determineTranslationInstant = function (translationId, interpolateParams, interpolationId, uses) {
+      var determineTranslationInstant = function (translationId, interpolateParams, interpolationId, uses, sanitizeStrategy) {
 
         var result, table = uses ? $translationTable[uses] : $translationTable,
-            Interpolator = defaultInterpolator;
+          Interpolator = defaultInterpolator;
 
         // if the interpolation id exists use custom interpolator
         if (interpolatorHashMap && Object.prototype.hasOwnProperty.call(interpolatorHashMap, interpolationId)) {
@@ -1991,21 +2044,21 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         }
 
         // if the translation id exists, we can just interpolate it
-        if (table && Object.prototype.hasOwnProperty.call(table, translationId)) {
+        if (table && Object.prototype.hasOwnProperty.call(table, translationId) && table[translationId] !== null) {
           var translation = table[translationId];
 
           // If using link, rerun $translate with linked translationId and return it
           if (translation.substr(0, 2) === '@:') {
-            result = determineTranslationInstant(translation.substr(2), interpolateParams, interpolationId, uses);
+            result = determineTranslationInstant(translation.substr(2), interpolateParams, interpolationId, uses, sanitizeStrategy);
           } else {
-            result = Interpolator.interpolate(translation, interpolateParams, 'filter');
-            result = applyPostProcessing(translationId, translation, result, interpolateParams, uses);
+            result = Interpolator.interpolate(translation, interpolateParams, 'filter', sanitizeStrategy, translationId);
+            result = applyPostProcessing(translationId, translation, result, interpolateParams, uses, sanitizeStrategy);
           }
         } else {
           var missingTranslationHandlerTranslation;
           // for logging purposes only (as in $translateMissingTranslationHandlerLog), value is not returned to promise
           if ($missingTranslationHandlerFactory && !pendingLoader) {
-            missingTranslationHandlerTranslation = translateByHandler(translationId, interpolateParams);
+            missingTranslationHandlerTranslation = translateByHandler(translationId, interpolateParams, sanitizeStrategy);
           }
 
           // since we couldn't translate the inital requested translation id,
@@ -2013,7 +2066,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           // configured.
           if (uses && $fallbackLanguage && $fallbackLanguage.length) {
             fallbackIndex = 0;
-            result = fallbackTranslationInstant(translationId, interpolateParams, Interpolator);
+            result = fallbackTranslationInstant(translationId, interpolateParams, Interpolator, sanitizeStrategy);
           } else if ($missingTranslationHandlerFactory && !pendingLoader && missingTranslationHandlerTranslation) {
             // looks like the requested translation id doesn't exists.
             // Now, if there is a registered handler for missing translations and no
@@ -2027,14 +2080,14 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         return result;
       };
 
-      var clearNextLangAndPromise = function(key) {
+      var clearNextLangAndPromise = function (key) {
         if ($nextLang === key) {
           $nextLang = undefined;
         }
         langPromises[key] = undefined;
       };
 
-      var applyPostProcessing = function (translationId, translation, resolvedTranslation, interpolateParams, uses) {
+      var applyPostProcessing = function (translationId, translation, resolvedTranslation, interpolateParams, uses, sanitizeStrategy) {
         var fn = postProcessFn;
 
         if (fn) {
@@ -2044,7 +2097,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
             fn = $injector.get(fn);
           }
           if (fn) {
-            return fn(translationId, translation, resolvedTranslation, interpolateParams, uses);
+            return fn(translationId, translation, resolvedTranslation, interpolateParams, uses, sanitizeStrategy);
           }
         }
 
@@ -2073,7 +2126,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @return {string} preferred language key
        */
       $translate.preferredLanguage = function (langKey) {
-        if(langKey) {
+        if (langKey) {
           setupPreferredLanguage(langKey);
         }
         return $preferredLanguage;
@@ -2114,6 +2167,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        *
        * @description
        * Returns the language key for the fallback languages or sets a new fallback stack.
+       * It is recommended to call this before {@link pascalprecht.translate.$translateProvider#preferredLanguage preferredLanguage()}.
        *
        * @param {string=} langKey language String or Array of fallback languages to be used (to change stack at runtime)
        *
@@ -2237,7 +2291,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        *   $scope.text = $translate("HELLO");
        * });
        *
-       * @param {string} [key] Language key
+       * @param {string=} key Language key
        * @return {object|string} Promise with loaded language data or the language key if a falsy param was given.
        */
       $translate.use = function (key) {
@@ -2246,8 +2300,9 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         }
 
         var deferred = $q.defer();
+        deferred.promise.then(null, angular.noop); // AJS "Possibly unhandled rejection"
 
-        $rootScope.$emit('$translateChangeStart', {language: key});
+        $rootScope.$emit('$translateChangeStart', {language : key});
 
         // Try to get the aliased language key
         var aliasedKey = negotiateLocale(key);
@@ -2272,14 +2327,14 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
             }
             return translation;
           }, function (key) {
-            $rootScope.$emit('$translateChangeError', {language: key});
+            $rootScope.$emit('$translateChangeError', {language : key});
             deferred.reject(key);
-            $rootScope.$emit('$translateChangeEnd', {language: key});
+            $rootScope.$emit('$translateChangeEnd', {language : key});
             return $q.reject(key);
           });
           langPromises[key]['finally'](function () {
             clearNextLangAndPromise(key);
-          });
+          })['catch'](angular.noop); // we don't care about errors (clearing)
         } else if (langPromises[key]) {
           // we are already loading this asynchronously
           // resolve our new deferred when the old langPromise is resolved
@@ -2409,68 +2464,68 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           throw new Error('Couldn\'t refresh translation table, no loader registered!');
         }
 
-        var deferred = $q.defer();
+        $rootScope.$emit('$translateRefreshStart', {language : langKey});
 
-        function resolve() {
-          deferred.resolve();
-          $rootScope.$emit('$translateRefreshEnd', {language: langKey});
+        var deferred = $q.defer(), updatedLanguages = {};
+
+        //private helper
+        function loadNewData(languageKey) {
+          var promise = loadAsync(languageKey);
+          //update the load promise cache for this language
+          langPromises[languageKey] = promise;
+          //register a data handler for the promise
+          promise.then(function (data) {
+              //clear the cache for this language
+              $translationTable[languageKey] = {};
+              //add the new data for this language
+              translations(languageKey, data.table);
+              //track that we updated this language
+              updatedLanguages[languageKey] = true;
+            },
+            //handle rejection to appease the $q validation
+            angular.noop);
+          return promise;
         }
 
-        function reject() {
-          deferred.reject();
-          $rootScope.$emit('$translateRefreshEnd', {language: langKey});
-        }
-
-        $rootScope.$emit('$translateRefreshStart', {language: langKey});
-
-        if (!langKey) {
-          // if there's no language key specified we refresh ALL THE THINGS!
-          var tables = [], loadingKeys = {};
-
-          // reload registered fallback languages
-          if ($fallbackLanguage && $fallbackLanguage.length) {
-            for (var i = 0, len = $fallbackLanguage.length; i < len; i++) {
-              tables.push(loadAsync($fallbackLanguage[i]));
-              loadingKeys[$fallbackLanguage[i]] = true;
+        //set up post-processing
+        deferred.promise.then(
+          function () {
+            for (var key in $translationTable) {
+              if ($translationTable.hasOwnProperty(key)) {
+                //delete cache entries that were not updated
+                if (!(key in updatedLanguages)) {
+                  delete $translationTable[key];
+                }
+              }
             }
-          }
-
-          // reload currently used language
-          if ($uses && !loadingKeys[$uses]) {
-            tables.push(loadAsync($uses));
-          }
-
-          var allTranslationsLoaded = function (tableData) {
-            $translationTable = {};
-            angular.forEach(tableData, function (data) {
-              translations(data.key, data.table);
-            });
             if ($uses) {
               useLanguage($uses);
             }
-            resolve();
-          };
-          allTranslationsLoaded.displayName = 'refreshPostProcessor';
+          },
+          //handle rejection to appease the $q validation
+          angular.noop
+        )['finally'](
+          function () {
+            $rootScope.$emit('$translateRefreshEnd', {language : langKey});
+          }
+        );
 
-          $q.all(tables).then(allTranslationsLoaded, reject);
+        if (!langKey) {
+          // if there's no language key specified we refresh ALL THE THINGS!
+          var languagesToReload = $fallbackLanguage && $fallbackLanguage.slice() || [];
+          if ($uses && languagesToReload.indexOf($uses) === -1) {
+            languagesToReload.push($uses);
+          }
+          $q.all(languagesToReload.map(loadNewData)).then(deferred.resolve, deferred.reject);
 
         } else if ($translationTable[langKey]) {
-
-          var oneTranslationsLoaded = function (data) {
-            translations(data.key, data.table);
-            if (langKey === $uses) {
-              useLanguage($uses);
-            }
-            resolve();
-            return data;
-          };
-          oneTranslationsLoaded.displayName = 'refreshPostProcessor';
-
-          loadAsync(langKey).then(oneTranslationsLoaded, reject);
+          //just refresh the specified language cache
+          loadNewData(langKey).then(deferred.resolve, deferred.reject);
 
         } else {
-          reject();
+          deferred.reject();
         }
+
         return deferred.promise;
       };
 
@@ -2489,17 +2544,18 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        *                                     This can be optionally an array of translation ids which
        *                                     results that the function's promise returns an object where
        *                                     each key is the translation id and the value the translation.
-       * @param {object} interpolateParams Params
-       * @param {string} interpolationId The id of the interpolation to use
-       * @param {string} forceLanguage A language to be used instead of the current language
+       * @param {object=} [interpolateParams={}] Params
+       * @param {string=} [interpolationId=undefined] The id of the interpolation to use (use default unless set via useInterpolation())
+       * @param {string=} [forceLanguage=false] A language to be used instead of the current language
+       * @param {string=} [sanitizeStrategy=undefined] force sanitize strategy for this call instead of using the configured one (use default unless set)
        *
        * @return {string|object} translation
        */
-      $translate.instant = function (translationId, interpolateParams, interpolationId, forceLanguage) {
+      $translate.instant = function (translationId, interpolateParams, interpolationId, forceLanguage, sanitizeStrategy) {
 
         // we don't want to re-negotiate $uses
         var uses = (forceLanguage && forceLanguage !== $uses) ? // we don't want to re-negotiate $uses
-              (negotiateLocale(forceLanguage) || forceLanguage) : $uses;
+          (negotiateLocale(forceLanguage) || forceLanguage) : $uses;
 
         // Detect undefined and null values to shorten the execution and prevent exceptions
         if (translationId === null || angular.isUndefined(translationId)) {
@@ -2516,7 +2572,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         if (angular.isArray(translationId)) {
           var results = {};
           for (var i = 0, c = translationId.length; i < c; i++) {
-            results[translationId[i]] = $translate.instant(translationId[i], interpolateParams, interpolationId, forceLanguage);
+            results[translationId[i]] = $translate.instant(translationId[i], interpolateParams, interpolationId, forceLanguage, sanitizeStrategy);
           }
           return results;
         }
@@ -2545,7 +2601,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           var possibleLangKey = possibleLangKeys[j];
           if ($translationTable[possibleLangKey]) {
             if (typeof $translationTable[possibleLangKey][translationId] !== 'undefined') {
-              result = determineTranslationInstant(translationId, interpolateParams, interpolationId, uses);
+              result = determineTranslationInstant(translationId, interpolateParams, interpolationId, uses, sanitizeStrategy);
             }
           }
           if (typeof result !== 'undefined') {
@@ -2558,9 +2614,18 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
             result = applyNotFoundIndicators(translationId);
           } else {
             // Return translation of default interpolator if not found anything.
-            result = defaultInterpolator.interpolate(translationId, interpolateParams, 'filter');
+            result = defaultInterpolator.interpolate(translationId, interpolateParams, 'filter', sanitizeStrategy);
+
+            // looks like the requested translation id doesn't exists.
+            // Now, if there is a registered handler for missing translations and no
+            // asyncLoader is pending, we execute the handler
+            var missingTranslationHandlerTranslation;
             if ($missingTranslationHandlerFactory && !pendingLoader) {
-              result = translateByHandler(translationId, interpolateParams);
+              missingTranslationHandlerTranslation = translateByHandler(translationId, interpolateParams, sanitizeStrategy);
+            }
+
+            if ($missingTranslationHandlerFactory && !pendingLoader && missingTranslationHandlerTranslation) {
+              result = missingTranslationHandlerTranslation;
             }
           }
         }
@@ -2633,7 +2698,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
        * @methodOf pascalprecht.translate.$translate
        *
        * @description
-       * Returns whether the service is "ready" to translate (i.e. loading 1st language).
+       * Calls the function provided or resolved the returned promise after the service is "ready" to translate (i.e. loading 1st language).
        *
        * See also {@link pascalprecht.translate.$translate#methods_isReady isReady()}.
        *
@@ -2672,6 +2737,30 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         return null;
       };
 
+      /**
+       * @ngdoc function
+       * @name pascalprecht.translate.$translate#getTranslationTable
+       * @methodOf pascalprecht.translate.$translate
+       *
+       * @description
+       * Returns translation table by the given language key.
+       *
+       * Unless a language is provided it returns a translation table of the current one.
+       * Note: If translation dictionary is currently downloading or in progress
+       * it will return null.
+       *
+       * @param {string} langKey A token which represents a translation id
+       *
+       * @return {object} a copy of angular-translate $translationTable
+       */
+      $translate.getTranslationTable = function (langKey) {
+        langKey = langKey || $translate.use();
+        if (langKey && $translationTable[langKey]) {
+          return angular.copy($translationTable[langKey]);
+        }
+        return null;
+      };
+
       // Whenever $translateReady is being fired, this will ensure the state of $isReady
       var globalOnReadyListener = $rootScope.$on('$translateReady', function () {
         $onReadyDeferred.resolve();
@@ -2699,7 +2788,7 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
         if ($fallbackLanguage && $fallbackLanguage.length) {
           var processAsyncResult = function (translation) {
             translations(translation.key, translation.table);
-            $rootScope.$emit('$translateChangeEnd', { language: translation.key });
+            $rootScope.$emit('$translateChangeEnd', {language : translation.key});
             return translation;
           };
           for (var i = 0, len = $fallbackLanguage.length; i < len; i++) {
@@ -2710,163 +2799,169 @@ function $translate($STORAGE_KEY, $windowProvider, $translateSanitizationProvide
           }
         }
       } else {
-        $rootScope.$emit('$translateReady', { language: $translate.use() });
+        $rootScope.$emit('$translateReady', {language : $translate.use()});
       }
 
       return $translate;
-    }
-  ];
-}
+    }];
+  }
 
-$translate.displayName = 'displayName';
+  $translate.displayName = 'displayName';
 
-/**
- * @ngdoc object
- * @name pascalprecht.translate.$translateDefaultInterpolation
- * @requires $interpolate
- *
- * @description
- * Uses angular's `$interpolate` services to interpolate strings against some values.
- *
- * Be aware to configure a proper sanitization strategy.
- *
- * See also:
- * * {@link pascalprecht.translate.$translateSanitization}
- *
- * @return {object} $translateDefaultInterpolation Interpolator service
- */
-angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation', $translateDefaultInterpolation);
+  /**
+   * @ngdoc object
+   * @name pascalprecht.translate.$translateDefaultInterpolation
+   * @requires $interpolate
+   *
+   * @description
+   * Uses angular's `$interpolate` services to interpolate strings against some values.
+   *
+   * Be aware to configure a proper sanitization strategy.
+   *
+   * See also:
+   * * {@link pascalprecht.translate.$translateSanitization}
+   *
+   * @return {object} $translateDefaultInterpolation Interpolator service
+   */
+  angular.module('pascalprecht.translate').factory('$translateDefaultInterpolation', $translateDefaultInterpolation);
 
-function $translateDefaultInterpolation ($interpolate, $translateSanitization) {
+  function $translateDefaultInterpolation ($interpolate, $translateSanitization) {
 
-  'use strict';
+    'use strict';
 
-  var $translateInterpolator = {},
+    var $translateInterpolator = {},
       $locale,
       $identifier = 'default';
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateDefaultInterpolation#setLocale
-   * @methodOf pascalprecht.translate.$translateDefaultInterpolation
-   *
-   * @description
-   * Sets current locale (this is currently not use in this interpolation).
-   *
-   * @param {string} locale Language key or locale.
-   */
-  $translateInterpolator.setLocale = function (locale) {
-    $locale = locale;
-  };
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateDefaultInterpolation#setLocale
+     * @methodOf pascalprecht.translate.$translateDefaultInterpolation
+     *
+     * @description
+     * Sets current locale (this is currently not use in this interpolation).
+     *
+     * @param {string} locale Language key or locale.
+     */
+    $translateInterpolator.setLocale = function (locale) {
+      $locale = locale;
+    };
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateDefaultInterpolation#getInterpolationIdentifier
-   * @methodOf pascalprecht.translate.$translateDefaultInterpolation
-   *
-   * @description
-   * Returns an identifier for this interpolation service.
-   *
-   * @returns {string} $identifier
-   */
-  $translateInterpolator.getInterpolationIdentifier = function () {
-    return $identifier;
-  };
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateDefaultInterpolation#getInterpolationIdentifier
+     * @methodOf pascalprecht.translate.$translateDefaultInterpolation
+     *
+     * @description
+     * Returns an identifier for this interpolation service.
+     *
+     * @returns {string} $identifier
+     */
+    $translateInterpolator.getInterpolationIdentifier = function () {
+      return $identifier;
+    };
 
-  /**
-   * @deprecated will be removed in 3.0
-   * @see {@link pascalprecht.translate.$translateSanitization}
-   */
-  $translateInterpolator.useSanitizeValueStrategy = function (value) {
-    $translateSanitization.useStrategy(value);
-    return this;
-  };
+    /**
+     * @deprecated will be removed in 3.0
+     * @see {@link pascalprecht.translate.$translateSanitization}
+     */
+    $translateInterpolator.useSanitizeValueStrategy = function (value) {
+      $translateSanitization.useStrategy(value);
+      return this;
+    };
 
-  /**
-   * @ngdoc function
-   * @name pascalprecht.translate.$translateDefaultInterpolation#interpolate
-   * @methodOf pascalprecht.translate.$translateDefaultInterpolation
-   *
-   * @description
-   * Interpolates given value agains given interpolate params using angulars
-   * `$interpolate` service.
-   *
-   * Since AngularJS 1.5, `value` must not be a string but can be anything input.
-   *
-   * @returns {string} interpolated string.
-   */
-  $translateInterpolator.interpolate = function (value, interpolationParams, context) {
-    interpolationParams = interpolationParams || {};
-    interpolationParams = $translateSanitization.sanitize(interpolationParams, 'params', undefined, context);
+    /**
+     * @ngdoc function
+     * @name pascalprecht.translate.$translateDefaultInterpolation#interpolate
+     * @methodOf pascalprecht.translate.$translateDefaultInterpolation
+     *
+     * @description
+     * Interpolates given value agains given interpolate params using angulars
+     * `$interpolate` service.
+     *
+     * Since AngularJS 1.5, `value` must not be a string but can be anything input.
+     *
+     * @param {string} value translation
+     * @param {object} [interpolationParams={}] interpolation params
+     * @param {string} [context=undefined] current context (filter, directive, service)
+     * @param {string} [sanitizeStrategy=undefined] sanitize strategy (use default unless set)
+     * @param {string} translationId current translationId
+     *
+     * @returns {string} interpolated string
+     */
+    $translateInterpolator.interpolate = function (value, interpolationParams, context, sanitizeStrategy, translationId) { // jshint ignore:line
+      interpolationParams = interpolationParams || {};
+      interpolationParams = $translateSanitization.sanitize(interpolationParams, 'params', sanitizeStrategy, context);
 
-    var interpolatedText;
-    if (angular.isNumber(value)) {
-      // numbers are safe
-      interpolatedText = '' + value;
-    } else if (angular.isString(value)) {
-      // strings must be interpolated (that's the job here)
-      interpolatedText = $interpolate(value)(interpolationParams);
-      interpolatedText = $translateSanitization.sanitize(interpolatedText, 'text', undefined, context);
-    } else {
-      // neither a number or a string, cant interpolate => empty string
-      interpolatedText = '';
-    }
+      var interpolatedText;
+      if (angular.isNumber(value)) {
+        // numbers are safe
+        interpolatedText = '' + value;
+      } else if (angular.isString(value)) {
+        // strings must be interpolated (that's the job here)
+        interpolatedText = $interpolate(value)(interpolationParams);
+        interpolatedText = $translateSanitization.sanitize(interpolatedText, 'text', sanitizeStrategy, context);
+      } else {
+        // neither a number or a string, cant interpolate => empty string
+        interpolatedText = '';
+      }
 
-    return interpolatedText;
-  };
+      return interpolatedText;
+    };
 
-  return $translateInterpolator;
-}
+    return $translateInterpolator;
+  }
 
-$translateDefaultInterpolation.displayName = '$translateDefaultInterpolation';
+  $translateDefaultInterpolation.displayName = '$translateDefaultInterpolation';
 
-angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_LANG_KEY');
+  angular.module('pascalprecht.translate').constant('$STORAGE_KEY', 'NG_TRANSLATE_LANG_KEY');
 
-angular.module('pascalprecht.translate')
-/**
- * @ngdoc directive
- * @name pascalprecht.translate.directive:translate
- * @requires $interpolate, 
- * @requires $compile, 
- * @requires $parse, 
- * @requires $rootScope
- * @restrict AE
- *
- * @description
- * Translates given translation id either through attribute or DOM content.
- * Internally it uses $translate service to translate the translation id. It possible to
- * pass an optional `translate-values` object literal as string into translation id.
- *
- * @param {string=} translate Translation id which could be either string or interpolated string.
- * @param {string=} translate-values Values to pass into translation id. Can be passed as object literal string or interpolated object.
- * @param {string=} translate-attr-ATTR translate Translation id and put it into ATTR attribute.
- * @param {string=} translate-default will be used unless translation was successful
- * @param {boolean=} translate-compile (default true if present) defines locally activation of {@link pascalprecht.translate.$translateProvider#methods_usePostCompiling}
- * @param {boolean=} translate-keep-content (default true if present) defines that in case a KEY could not be translated, that the existing content is left in the innerHTML}
- *
- * @example
-   <example module="ngView">
-    <file name="index.html">
-      <div ng-controller="TranslateCtrl">
+  angular.module('pascalprecht.translate')
+    /**
+     * @ngdoc directive
+     * @name pascalprecht.translate.directive:translate
+     * @requires $interpolate,
+     * @requires $compile,
+     * @requires $parse,
+     * @requires $rootScope
+     * @restrict AE
+     *
+     * @description
+     * Translates given translation id either through attribute or DOM content.
+     * Internally it uses $translate service to translate the translation id. It possible to
+     * pass an optional `translate-values` object literal as string into translation id.
+     *
+     * @param {string=} translate Translation id which could be either string or interpolated string.
+     * @param {string=} translate-values Values to pass into translation id. Can be passed as object literal string or interpolated object.
+     * @param {string=} translate-attr-ATTR translate Translation id and put it into ATTR attribute.
+     * @param {string=} translate-default will be used unless translation was successful
+     * @param {string=} translate-sanitize-strategy defines locally sanitize strategy
+     * @param {boolean=} translate-compile (default true if present) defines locally activation of {@link pascalprecht.translate.$translateProvider#methods_usePostCompiling}
+     * @param {boolean=} translate-keep-content (default true if present) defines that in case a KEY could not be translated, that the existing content is left in the innerHTML}
+     *
+     * @example
+     <example module="ngView">
+     <file name="index.html">
+     <div ng-controller="TranslateCtrl">
 
-        <pre translate="TRANSLATION_ID"></pre>
-        <pre translate>TRANSLATION_ID</pre>
-        <pre translate translate-attr-title="TRANSLATION_ID"></pre>
-        <pre translate="{{translationId}}"></pre>
-        <pre translate>{{translationId}}</pre>
-        <pre translate="WITH_VALUES" translate-values="{value: 5}"></pre>
-        <pre translate translate-values="{value: 5}">WITH_VALUES</pre>
-        <pre translate="WITH_VALUES" translate-values="{{values}}"></pre>
-        <pre translate translate-values="{{values}}">WITH_VALUES</pre>
-        <pre translate translate-attr-title="WITH_VALUES" translate-values="{{values}}"></pre>
-        <pre translate="WITH_CAMEL_CASE_KEY" translate-value-camel-case-key="Hi"></pre>
+     <pre translate="TRANSLATION_ID"></pre>
+     <pre translate>TRANSLATION_ID</pre>
+     <pre translate translate-attr-title="TRANSLATION_ID"></pre>
+     <pre translate="{{translationId}}"></pre>
+     <pre translate>{{translationId}}</pre>
+     <pre translate="WITH_VALUES" translate-values="{value: 5}"></pre>
+     <pre translate translate-values="{value: 5}">WITH_VALUES</pre>
+     <pre translate="WITH_VALUES" translate-values="{{values}}"></pre>
+     <pre translate translate-values="{{values}}">WITH_VALUES</pre>
+     <pre translate translate-attr-title="WITH_VALUES" translate-values="{{values}}"></pre>
+     <pre translate="WITH_CAMEL_CASE_KEY" translate-value-camel-case-key="Hi"></pre>
 
-      </div>
-    </file>
-    <file name="script.js">
-      angular.module('ngView', ['pascalprecht.translate'])
+     </div>
+     </file>
+     <file name="script.js">
+     angular.module('ngView', ['pascalprecht.translate'])
 
-      .config(function ($translateProvider) {
+     .config(function ($translateProvider) {
 
         $translateProvider.translations('en',{
           'TRANSLATION_ID': 'Hello there!',
@@ -2876,16 +2971,16 @@ angular.module('pascalprecht.translate')
 
       });
 
-      angular.module('ngView').controller('TranslateCtrl', function ($scope) {
+     angular.module('ngView').controller('TranslateCtrl', function ($scope) {
         $scope.translationId = 'TRANSLATION_ID';
 
         $scope.values = {
           value: 78
         };
       });
-    </file>
-    <file name="scenario.js">
-      it('should translate', function () {
+     </file>
+     <file name="scenario.js">
+     it('should translate', function () {
         inject(function ($rootScope, $compile) {
           $rootScope.translationId = 'TRANSLATION_ID';
 
@@ -2914,298 +3009,322 @@ angular.module('pascalprecht.translate')
           expect(element.text()).toBe('The interpolation key is camel cased: Hello');
         });
       });
-    </file>
-   </example>
- */
-.directive('translate', translateDirective);
-function translateDirective($translate, $interpolate, $compile, $parse, $rootScope) {
+     </file>
+     </example>
+     */
+    .directive('translate', translateDirective);
+  function translateDirective($translate, $interpolate, $compile, $parse, $rootScope) {
 
-  'use strict';
+    'use strict';
 
-  /**
-   * @name trim
-   * @private
-   *
-   * @description
-   * trim polyfill
-   *
-   * @returns {string} The string stripped of whitespace from both ends
-   */
-  var trim = function() {
-    return this.toString().replace(/^\s+|\s+$/g, '');
-  };
+    /**
+     * @name trim
+     * @private
+     *
+     * @description
+     * trim polyfill
+     *
+     * @returns {string} The string stripped of whitespace from both ends
+     */
+    var trim = function() {
+      return this.toString().replace(/^\s+|\s+$/g, '');
+    };
 
-  return {
-    restrict: 'AE',
-    scope: true,
-    priority: $translate.directivePriority(),
-    compile: function (tElement, tAttr) {
+    /**
+     * @name lowercase
+     * @private
+     *
+     * @description
+     * Return the lowercase string only if the type is string
+     *
+     * @returns {string} The string all in lowercase
+     */
+    var lowercase = function (string) {
+      return angular.isString(string) ? string.toLowerCase() : string;
+    };
 
-      var translateValuesExist = (tAttr.translateValues) ?
-        tAttr.translateValues : undefined;
+    return {
+      restrict: 'AE',
+      scope: true,
+      priority: $translate.directivePriority(),
+      compile: function (tElement, tAttr) {
 
-      var translateInterpolation = (tAttr.translateInterpolation) ?
-        tAttr.translateInterpolation : undefined;
+        var translateValuesExist = (tAttr.translateValues) ?
+          tAttr.translateValues : undefined;
 
-      var translateValueExist = tElement[0].outerHTML.match(/translate-value-+/i);
+        var translateInterpolation = (tAttr.translateInterpolation) ?
+          tAttr.translateInterpolation : undefined;
 
-      var interpolateRegExp = '^(.*)(' + $interpolate.startSymbol() + '.*' + $interpolate.endSymbol() + ')(.*)',
+        var translateSanitizeStrategyExist = (tAttr.translateSanitizeStrategy) ?
+          tAttr.translateSanitizeStrategy : undefined;
+
+        var translateValueExist = tElement[0].outerHTML.match(/translate-value-+/i);
+
+        var interpolateRegExp = '^(.*)(' + $interpolate.startSymbol() + '.*' + $interpolate.endSymbol() + ')(.*)',
           watcherRegExp = '^(.*)' + $interpolate.startSymbol() + '(.*)' + $interpolate.endSymbol() + '(.*)';
 
-      return function linkFn(scope, iElement, iAttr) {
+        return function linkFn(scope, iElement, iAttr) {
 
-        scope.interpolateParams = {};
-        scope.preText = '';
-        scope.postText = '';
-        scope.translateNamespace = getTranslateNamespace(scope);
-        var translationIds = {};
+          scope.interpolateParams = {};
+          scope.preText = '';
+          scope.postText = '';
+          scope.translateNamespace = getTranslateNamespace(scope);
+          var translationIds = {};
 
-        var initInterpolationParams = function (interpolateParams, iAttr, tAttr) {
-          // initial setup
-          if (iAttr.translateValues) {
-            angular.extend(interpolateParams, $parse(iAttr.translateValues)(scope.$parent));
-          }
-          // initially fetch all attributes if existing and fill the params
-          if (translateValueExist) {
-            for (var attr in tAttr) {
-              if (Object.prototype.hasOwnProperty.call(iAttr, attr) && attr.substr(0, 14) === 'translateValue' && attr !== 'translateValues') {
-                var attributeName = angular.lowercase(attr.substr(14, 1)) + attr.substr(15);
-                interpolateParams[attributeName] = tAttr[attr];
+          var initInterpolationParams = function (interpolateParams, iAttr, tAttr) {
+            // initial setup
+            if (iAttr.translateValues) {
+              angular.extend(interpolateParams, $parse(iAttr.translateValues)(scope.$parent));
+            }
+            // initially fetch all attributes if existing and fill the params
+            if (translateValueExist) {
+              for (var attr in tAttr) {
+                if (Object.prototype.hasOwnProperty.call(iAttr, attr) && attr.substr(0, 14) === 'translateValue' && attr !== 'translateValues') {
+                  var attributeName = lowercase(attr.substr(14, 1)) + attr.substr(15);
+                  interpolateParams[attributeName] = tAttr[attr];
+                }
               }
             }
-          }
-        };
+          };
 
-        // Ensures any change of the attribute "translate" containing the id will
-        // be re-stored to the scope's "translationId".
-        // If the attribute has no content, the element's text value (white spaces trimmed off) will be used.
-        var observeElementTranslation = function (translationId) {
+          // Ensures any change of the attribute "translate" containing the id will
+          // be re-stored to the scope's "translationId".
+          // If the attribute has no content, the element's text value (white spaces trimmed off) will be used.
+          var observeElementTranslation = function (translationId) {
 
-          // Remove any old watcher
-          if (angular.isFunction(observeElementTranslation._unwatchOld)) {
-            observeElementTranslation._unwatchOld();
-            observeElementTranslation._unwatchOld = undefined;
-          }
+            // Remove any old watcher
+            if (angular.isFunction(observeElementTranslation._unwatchOld)) {
+              observeElementTranslation._unwatchOld();
+              observeElementTranslation._unwatchOld = undefined;
+            }
 
-          if (angular.equals(translationId , '') || !angular.isDefined(translationId)) {
-            var iElementText = trim.apply(iElement.text());
+            if (angular.equals(translationId , '') || !angular.isDefined(translationId)) {
+              var iElementText = trim.apply(iElement.text()).replace(/\n/g, ' ');
 
-            // Resolve translation id by inner html if required
-            var interpolateMatches = iElementText.match(interpolateRegExp);
-            // Interpolate translation id if required
-            if (angular.isArray(interpolateMatches)) {
-              scope.preText = interpolateMatches[1];
-              scope.postText = interpolateMatches[3];
-              translationIds.translate = $interpolate(interpolateMatches[2])(scope.$parent);
-              var watcherMatches = iElementText.match(watcherRegExp);
-              if (angular.isArray(watcherMatches) && watcherMatches[2] && watcherMatches[2].length) {
-                observeElementTranslation._unwatchOld = scope.$watch(watcherMatches[2], function (newValue) {
-                  translationIds.translate = newValue;
-                  updateTranslations();
-                });
+              // Resolve translation id by inner html if required
+              var interpolateMatches = iElementText.match(interpolateRegExp);
+              // Interpolate translation id if required
+              if (angular.isArray(interpolateMatches)) {
+                scope.preText = interpolateMatches[1];
+                scope.postText = interpolateMatches[3];
+                translationIds.translate = $interpolate(interpolateMatches[2])(scope.$parent);
+                var watcherMatches = iElementText.match(watcherRegExp);
+                if (angular.isArray(watcherMatches) && watcherMatches[2] && watcherMatches[2].length) {
+                  observeElementTranslation._unwatchOld = scope.$watch(watcherMatches[2], function (newValue) {
+                    translationIds.translate = newValue;
+                    updateTranslations();
+                  });
+                }
+              } else {
+                // do not assigne the translation id if it is empty.
+                translationIds.translate = !iElementText ? undefined : iElementText;
               }
             } else {
-              // do not assigne the translation id if it is empty.
-              translationIds.translate = !iElementText ? undefined : iElementText;
-            }
-          } else {
-            translationIds.translate = translationId;
-          }
-          updateTranslations();
-        };
-
-        var observeAttributeTranslation = function (translateAttr) {
-          iAttr.$observe(translateAttr, function (translationId) {
-            translationIds[translateAttr] = translationId;
-            updateTranslations();
-          });
-        };
-
-        // initial setup with values
-        initInterpolationParams(scope.interpolateParams, iAttr, tAttr);
-
-        var firstAttributeChangedEvent = true;
-        iAttr.$observe('translate', function (translationId) {
-          if (typeof translationId === 'undefined') {
-            // case of element "<translate>xyz</translate>"
-            observeElementTranslation('');
-          } else {
-            // case of regular attribute
-            if (translationId !== '' || !firstAttributeChangedEvent) {
               translationIds.translate = translationId;
+            }
+            updateTranslations();
+          };
+
+          var observeAttributeTranslation = function (translateAttr) {
+            iAttr.$observe(translateAttr, function (translationId) {
+              translationIds[translateAttr] = translationId;
               updateTranslations();
-            }
-          }
-          firstAttributeChangedEvent = false;
-        });
-
-        for (var translateAttr in iAttr) {
-          if (iAttr.hasOwnProperty(translateAttr) && translateAttr.substr(0, 13) === 'translateAttr' && translateAttr.length > 13) {
-            observeAttributeTranslation(translateAttr);
-          }
-        }
-
-        iAttr.$observe('translateDefault', function (value) {
-          scope.defaultText = value;
-          updateTranslations();
-        });
-
-        if (translateValuesExist) {
-          iAttr.$observe('translateValues', function (interpolateParams) {
-            if (interpolateParams) {
-              scope.$parent.$watch(function () {
-                angular.extend(scope.interpolateParams, $parse(interpolateParams)(scope.$parent));
-              });
-            }
-          });
-        }
-
-        if (translateValueExist) {
-          var observeValueAttribute = function (attrName) {
-            iAttr.$observe(attrName, function (value) {
-              var attributeName = angular.lowercase(attrName.substr(14, 1)) + attrName.substr(15);
-              scope.interpolateParams[attributeName] = value;
             });
           };
-          for (var attr in iAttr) {
-            if (Object.prototype.hasOwnProperty.call(iAttr, attr) && attr.substr(0, 14) === 'translateValue' && attr !== 'translateValues') {
-              observeValueAttribute(attr);
+
+          // initial setup with values
+          initInterpolationParams(scope.interpolateParams, iAttr, tAttr);
+
+          var firstAttributeChangedEvent = true;
+          iAttr.$observe('translate', function (translationId) {
+            if (typeof translationId === 'undefined') {
+              // case of element "<translate>xyz</translate>"
+              observeElementTranslation('');
+            } else {
+              // case of regular attribute
+              if (translationId !== '' || !firstAttributeChangedEvent) {
+                translationIds.translate = translationId;
+                updateTranslations();
+              }
+            }
+            firstAttributeChangedEvent = false;
+          });
+
+          for (var translateAttr in iAttr) {
+            if (iAttr.hasOwnProperty(translateAttr) && translateAttr.substr(0, 13) === 'translateAttr' && translateAttr.length > 13) {
+              observeAttributeTranslation(translateAttr);
             }
           }
-        }
 
-        // Master update function
-        var updateTranslations = function () {
-          for (var key in translationIds) {
-            if (translationIds.hasOwnProperty(key) && translationIds[key] !== undefined) {
-              updateTranslation(key, translationIds[key], scope, scope.interpolateParams, scope.defaultText, scope.translateNamespace);
-            }
+          iAttr.$observe('translateDefault', function (value) {
+            scope.defaultText = value;
+            updateTranslations();
+          });
+
+          if (translateSanitizeStrategyExist) {
+            iAttr.$observe('translateSanitizeStrategy', function (value) {
+              scope.sanitizeStrategy = $parse(value)(scope.$parent);
+              updateTranslations();
+            });
           }
-        };
 
-        // Put translation processing function outside loop
-        var updateTranslation = function(translateAttr, translationId, scope, interpolateParams, defaultTranslationText, translateNamespace) {
-          if (translationId) {
-            // if translation id starts with '.' and translateNamespace given, prepend namespace
-            if (translateNamespace && translationId.charAt(0) === '.') {
-              translationId = translateNamespace + translationId;
-            }
+          if (translateValuesExist) {
+            iAttr.$observe('translateValues', function (interpolateParams) {
+              if (interpolateParams) {
+                scope.$parent.$watch(function () {
+                  angular.extend(scope.interpolateParams, $parse(interpolateParams)(scope.$parent));
+                });
+              }
+            });
+          }
 
-            $translate(translationId, interpolateParams, translateInterpolation, defaultTranslationText, scope.translateLanguage)
-              .then(function (translation) {
-                applyTranslation(translation, scope, true, translateAttr);
-              }, function (translationId) {
-                applyTranslation(translationId, scope, false, translateAttr);
+          if (translateValueExist) {
+            var observeValueAttribute = function (attrName) {
+              iAttr.$observe(attrName, function (value) {
+                var attributeName = lowercase(attrName.substr(14, 1)) + attrName.substr(15);
+                scope.interpolateParams[attributeName] = value;
               });
-          } else {
-            // as an empty string cannot be translated, we can solve this using successful=false
-            applyTranslation(translationId, scope, false, translateAttr);
-          }
-        };
-
-        var applyTranslation = function (value, scope, successful, translateAttr) {
-          if (!successful) {
-            if (typeof scope.defaultText !== 'undefined') {
-              value = scope.defaultText;
+            };
+            for (var attr in iAttr) {
+              if (Object.prototype.hasOwnProperty.call(iAttr, attr) && attr.substr(0, 14) === 'translateValue' && attr !== 'translateValues') {
+                observeValueAttribute(attr);
+              }
             }
           }
-          if (translateAttr === 'translate') {
-            // default translate into innerHTML
-            if (successful || (!successful && !$translate.isKeepContent() && typeof iAttr.translateKeepContent === 'undefined')) {
-              iElement.empty().append(scope.preText + value + scope.postText);
+
+          // Master update function
+          var updateTranslations = function () {
+            for (var key in translationIds) {
+              if (translationIds.hasOwnProperty(key) && translationIds[key] !== undefined) {
+                updateTranslation(key, translationIds[key], scope, scope.interpolateParams, scope.defaultText, scope.translateNamespace);
+              }
             }
-            var globallyEnabled = $translate.isPostCompilingEnabled();
-            var locallyDefined = typeof tAttr.translateCompile !== 'undefined';
-            var locallyEnabled = locallyDefined && tAttr.translateCompile !== 'false';
-            if ((globallyEnabled && !locallyDefined) || locallyEnabled) {
-              $compile(iElement.contents())(scope);
+          };
+
+          // Put translation processing function outside loop
+          var updateTranslation = function(translateAttr, translationId, scope, interpolateParams, defaultTranslationText, translateNamespace) {
+            if (translationId) {
+              // if translation id starts with '.' and translateNamespace given, prepend namespace
+              if (translateNamespace && translationId.charAt(0) === '.') {
+                translationId = translateNamespace + translationId;
+              }
+
+              $translate(translationId, interpolateParams, translateInterpolation, defaultTranslationText, scope.translateLanguage, scope.sanitizeStrategy)
+                .then(function (translation) {
+                  applyTranslation(translation, scope, true, translateAttr);
+                }, function (translationId) {
+                  applyTranslation(translationId, scope, false, translateAttr);
+                });
+            } else {
+              // as an empty string cannot be translated, we can solve this using successful=false
+              applyTranslation(translationId, scope, false, translateAttr);
             }
-          } else {
-            // translate attribute
-            var attributeName = iAttr.$attr[translateAttr];
-            if (attributeName.substr(0, 5) === 'data-') {
-              // ensure html5 data prefix is stripped
-              attributeName = attributeName.substr(5);
+          };
+
+          var applyTranslation = function (value, scope, successful, translateAttr) {
+            if (!successful) {
+              if (typeof scope.defaultText !== 'undefined') {
+                value = scope.defaultText;
+              }
             }
-            attributeName = attributeName.substr(15);
-            iElement.attr(attributeName, value);
+            if (translateAttr === 'translate') {
+              // default translate into innerHTML
+              if (successful || (!successful && !$translate.isKeepContent() && typeof iAttr.translateKeepContent === 'undefined')) {
+                iElement.empty().append(scope.preText + value + scope.postText);
+              }
+              var globallyEnabled = $translate.isPostCompilingEnabled();
+              var locallyDefined = typeof tAttr.translateCompile !== 'undefined';
+              var locallyEnabled = locallyDefined && tAttr.translateCompile !== 'false';
+              if ((globallyEnabled && !locallyDefined) || locallyEnabled) {
+                $compile(iElement.contents())(scope);
+              }
+            } else {
+              // translate attribute
+              var attributeName = iAttr.$attr[translateAttr];
+              if (attributeName.substr(0, 5) === 'data-') {
+                // ensure html5 data prefix is stripped
+                attributeName = attributeName.substr(5);
+              }
+              attributeName = attributeName.substr(15);
+              iElement.attr(attributeName, value);
+            }
+          };
+
+          if (translateValuesExist || translateValueExist || iAttr.translateDefault) {
+            scope.$watch('interpolateParams', updateTranslations, true);
           }
-        };
 
-        if (translateValuesExist || translateValueExist || iAttr.translateDefault) {
-          scope.$watch('interpolateParams', updateTranslations, true);
-        }
+          // Replaced watcher on translateLanguage with event listener
+          scope.$on('translateLanguageChanged', updateTranslations);
 
-        // Replaced watcher on translateLanguage with event listener
-        scope.$on('translateLanguageChanged', updateTranslations);
+          // Ensures the text will be refreshed after the current language was changed
+          // w/ $translate.use(...)
+          var unbind = $rootScope.$on('$translateChangeSuccess', updateTranslations);
 
-        // Ensures the text will be refreshed after the current language was changed
-        // w/ $translate.use(...)
-        var unbind = $rootScope.$on('$translateChangeSuccess', updateTranslations);
-
-        // ensure translation will be looked up at least one
-        if (iElement.text().length) {
-          if (iAttr.translate) {
+          // ensure translation will be looked up at least one
+          if (iElement.text().length) {
+            if (iAttr.translate) {
+              observeElementTranslation(iAttr.translate);
+            } else {
+              observeElementTranslation('');
+            }
+          } else if (iAttr.translate) {
+            // ensure attribute will be not skipped
             observeElementTranslation(iAttr.translate);
-          } else {
-            observeElementTranslation('');
           }
-        } else if (iAttr.translate) {
-          // ensure attribute will be not skipped
-          observeElementTranslation(iAttr.translate);
-        }
-        updateTranslations();
-        scope.$on('$destroy', unbind);
-      };
+          updateTranslations();
+          scope.$on('$destroy', unbind);
+        };
+      }
+    };
+  }
+
+  /**
+   * Returns the scope's namespace.
+   * @private
+   * @param scope
+   * @returns {string}
+   */
+  function getTranslateNamespace(scope) {
+    'use strict';
+    if (scope.translateNamespace) {
+      return scope.translateNamespace;
     }
-  };
-}
-
-/**
- * Returns the scope's namespace.
- * @private
- * @param scope
- * @returns {string}
- */
-function getTranslateNamespace(scope) {
-  'use strict';
-  if (scope.translateNamespace) {
-    return scope.translateNamespace;
+    if (scope.$parent) {
+      return getTranslateNamespace(scope.$parent);
+    }
   }
-  if (scope.$parent) {
-    return getTranslateNamespace(scope.$parent);
-  }
-}
 
-translateDirective.displayName = 'translateDirective';
+  translateDirective.displayName = 'translateDirective';
 
-angular.module('pascalprecht.translate')
-/**
- * @ngdoc directive
- * @name pascalprecht.translate.directive:translate-attr
- * @restrict A
- *
- * @description
- * Translates attributes like translate-attr-ATTR, but with an object like ng-class.
- * Internally it uses `translate` service to translate translation id. It possible to
- * pass an optional `translate-values` object literal as string into translation id.
- *
- * @param {string=} translate-attr Object literal mapping attributes to translation ids.
- * @param {string=} translate-values Values to pass into the translation ids. Can be passed as object literal string.
- *
- * @example
-   <example module="ngView">
-    <file name="index.html">
-      <div ng-controller="TranslateCtrl">
+  angular.module('pascalprecht.translate')
+    /**
+     * @ngdoc directive
+     * @name pascalprecht.translate.directive:translate-attr
+     * @restrict A
+     *
+     * @description
+     * Translates attributes like translate-attr-ATTR, but with an object like ng-class.
+     * Internally it uses `translate` service to translate translation id. It possible to
+     * pass an optional `translate-values` object literal as string into translation id.
+     *
+     * @param {string=} translate-attr Object literal mapping attributes to translation ids.
+     * @param {string=} translate-values Values to pass into the translation ids. Can be passed as object literal string.
+     * @param {string=} translate-sanitize-strategy defines locally sanitize strategy
+     *
+     * @example
+     <example module="ngView">
+     <file name="index.html">
+     <div ng-controller="TranslateCtrl">
 
-        <input translate-attr="{ placeholder: translationId, title: 'WITH_VALUES' }" translate-values="{value: 5}" />
+     <input translate-attr="{ placeholder: translationId, title: 'WITH_VALUES' }" translate-values="{value: 5}" />
 
-      </div>
-    </file>
-    <file name="script.js">
-      angular.module('ngView', ['pascalprecht.translate'])
+     </div>
+     </file>
+     <file name="script.js">
+     angular.module('ngView', ['pascalprecht.translate'])
 
-      .config(function ($translateProvider) {
+     .config(function ($translateProvider) {
 
         $translateProvider.translations('en',{
           'TRANSLATION_ID': 'Hello there!',
@@ -3214,16 +3333,16 @@ angular.module('pascalprecht.translate')
 
       });
 
-      angular.module('ngView').controller('TranslateCtrl', function ($scope) {
+     angular.module('ngView').controller('TranslateCtrl', function ($scope) {
         $scope.translationId = 'TRANSLATION_ID';
 
         $scope.values = {
           value: 78
         };
       });
-    </file>
-    <file name="scenario.js">
-      it('should translate', function () {
+     </file>
+     <file name="scenario.js">
+     it('should translate', function () {
         inject(function ($rootScope, $compile) {
           $rootScope.translationId = 'TRANSLATION_ID';
 
@@ -3233,195 +3352,202 @@ angular.module('pascalprecht.translate')
           expect(element.attr('title)).toBe('The following value is dynamic: 5');
         });
       });
-    </file>
-   </example>
- */
-.directive('translateAttr', translateAttrDirective);
-function translateAttrDirective($translate, $rootScope) {
+     </file>
+     </example>
+     */
+    .directive('translateAttr', translateAttrDirective);
+  function translateAttrDirective($translate, $rootScope) {
 
-  'use strict';
+    'use strict';
 
-  return {
-    restrict: 'A',
-    priority: $translate.directivePriority(),
-    link: function linkFn(scope, element, attr) {
+    return {
+      restrict: 'A',
+      priority: $translate.directivePriority(),
+      link: function linkFn(scope, element, attr) {
 
-      var translateAttr,
+        var translateAttr,
           translateValues,
+          translateSanitizeStrategy,
           previousAttributes = {};
 
-      // Main update translations function
-      var updateTranslations = function () {
-        angular.forEach(translateAttr, function (translationId, attributeName) {
-          if (!translationId) {
-            return;
-          }
-          previousAttributes[attributeName] = true;
+        // Main update translations function
+        var updateTranslations = function () {
+          angular.forEach(translateAttr, function (translationId, attributeName) {
+            if (!translationId) {
+              return;
+            }
+            previousAttributes[attributeName] = true;
 
-          // if translation id starts with '.' and translateNamespace given, prepend namespace
-          if (scope.translateNamespace && translationId.charAt(0) === '.') {
-            translationId = scope.translateNamespace + translationId;
-          }
-          $translate(translationId, translateValues, attr.translateInterpolation, undefined, scope.translateLanguage)
-            .then(function (translation) {
-              element.attr(attributeName, translation);
-            }, function (translationId) {
-              element.attr(attributeName, translationId);
-            });
-        });
-
-        // Removing unused attributes that were previously used
-        angular.forEach(previousAttributes, function (flag, attributeName) {
-          if (!translateAttr[attributeName]) {
-            element.removeAttr(attributeName);
-            delete previousAttributes[attributeName];
-          }
-        });
-      };
-
-      // Watch for attribute changes
-      watchAttribute(
-        scope,
-        attr.translateAttr,
-        function (newValue) { translateAttr = newValue; },
-        updateTranslations
-      );
-      // Watch for value changes
-      watchAttribute(
-        scope,
-        attr.translateValues,
-        function (newValue) { translateValues = newValue; },
-        updateTranslations
-      );
-
-      if (attr.translateValues) {
-        scope.$watch(attr.translateValues, updateTranslations, true);
-      }
-
-      // Replaced watcher on translateLanguage with event listener
-      scope.$on('translateLanguageChanged', updateTranslations);
-
-      // Ensures the text will be refreshed after the current language was changed
-      // w/ $translate.use(...)
-      var unbind = $rootScope.$on('$translateChangeSuccess', updateTranslations);
-
-      updateTranslations();
-      scope.$on('$destroy', unbind);
-    }
-  };
-}
-
-function watchAttribute(scope, attribute, valueCallback, changeCallback) {
-  'use strict';
-  if (!attribute) {
-    return;
-  }
-  if (attribute.substr(0, 2) === '::') {
-    attribute = attribute.substr(2);
-  } else {
-    scope.$watch(attribute, function(newValue) {
-      valueCallback(newValue);
-      changeCallback();
-    }, true);
-  }
-  valueCallback(scope.$eval(attribute));
-}
-
-translateAttrDirective.displayName = 'translateAttrDirective';
-
-angular.module('pascalprecht.translate')
-/**
- * @ngdoc directive
- * @name pascalprecht.translate.directive:translateCloak
- * @requires $rootScope
- * @requires $translate
- * @restrict A
- *
- * $description
- * Adds a `translate-cloak` class name to the given element where this directive
- * is applied initially and removes it, once a loader has finished loading.
- *
- * This directive can be used to prevent initial flickering when loading translation
- * data asynchronously.
- *
- * The class name is defined in
- * {@link pascalprecht.translate.$translateProvider#cloakClassName $translate.cloakClassName()}.
- *
- * @param {string=} translate-cloak If a translationId is provided, it will be used for showing
- *                                  or hiding the cloak. Basically it relies on the translation
- *                                  resolve.
- */
-.directive('translateCloak', translateCloakDirective);
-
-function translateCloakDirective($translate, $rootScope) {
-
-  'use strict';
-
-  return {
-    compile: function (tElement) {
-      var applyCloak = function () {
-        tElement.addClass($translate.cloakClassName());
-      },
-      removeCloak = function () {
-        tElement.removeClass($translate.cloakClassName());
-      };
-      $translate.onReady(function () {
-        removeCloak();
-      });
-      applyCloak();
-
-      return function linkFn(scope, iElement, iAttr) {
-        if (iAttr.translateCloak && iAttr.translateCloak.length) {
-          // Register a watcher for the defined translation allowing a fine tuned cloak
-          iAttr.$observe('translateCloak', function (translationId) {
-            $translate(translationId).then(removeCloak, applyCloak);
+            // if translation id starts with '.' and translateNamespace given, prepend namespace
+            if (scope.translateNamespace && translationId.charAt(0) === '.') {
+              translationId = scope.translateNamespace + translationId;
+            }
+            $translate(translationId, translateValues, attr.translateInterpolation, undefined, scope.translateLanguage, translateSanitizeStrategy)
+              .then(function (translation) {
+                element.attr(attributeName, translation);
+              }, function (translationId) {
+                element.attr(attributeName, translationId);
+              });
           });
-          // Register for change events as this is being another indicicator revalidating the cloak)
-          $rootScope.$on('$translateChangeSuccess', function () {
-            $translate(iAttr.translateCloak).then(removeCloak, applyCloak);
+
+          // Removing unused attributes that were previously used
+          angular.forEach(previousAttributes, function (flag, attributeName) {
+            if (!translateAttr[attributeName]) {
+              element.removeAttr(attributeName);
+              delete previousAttributes[attributeName];
+            }
           });
+        };
+
+        // Watch for attribute changes
+        watchAttribute(
+          scope,
+          attr.translateAttr,
+          function (newValue) { translateAttr = newValue; },
+          updateTranslations
+        );
+        // Watch for value changes
+        watchAttribute(
+          scope,
+          attr.translateValues,
+          function (newValue) { translateValues = newValue; },
+          updateTranslations
+        );
+        // Watch for sanitize strategy changes
+        watchAttribute(
+          scope,
+          attr.translateSanitizeStrategy,
+          function (newValue) { translateSanitizeStrategy = newValue; },
+          updateTranslations
+        );
+
+        if (attr.translateValues) {
+          scope.$watch(attr.translateValues, updateTranslations, true);
         }
-      };
+
+        // Replaced watcher on translateLanguage with event listener
+        scope.$on('translateLanguageChanged', updateTranslations);
+
+        // Ensures the text will be refreshed after the current language was changed
+        // w/ $translate.use(...)
+        var unbind = $rootScope.$on('$translateChangeSuccess', updateTranslations);
+
+        updateTranslations();
+        scope.$on('$destroy', unbind);
+      }
+    };
+  }
+
+  function watchAttribute(scope, attribute, valueCallback, changeCallback) {
+    'use strict';
+    if (!attribute) {
+      return;
     }
-  };
-}
+    if (attribute.substr(0, 2) === '::') {
+      attribute = attribute.substr(2);
+    } else {
+      scope.$watch(attribute, function(newValue) {
+        valueCallback(newValue);
+        changeCallback();
+      }, true);
+    }
+    valueCallback(scope.$eval(attribute));
+  }
 
-translateCloakDirective.displayName = 'translateCloakDirective';
+  translateAttrDirective.displayName = 'translateAttrDirective';
 
-angular.module('pascalprecht.translate')
-/**
- * @ngdoc directive
- * @name pascalprecht.translate.directive:translateNamespace
- * @restrict A
- *
- * @description
- * Translates given translation id either through attribute or DOM content.
- * Internally it uses `translate` filter to translate translation id. It possible to
- * pass an optional `translate-values` object literal as string into translation id.
- *
- * @param {string=} translate namespace name which could be either string or interpolated string.
- *
- * @example
-   <example module="ngView">
-    <file name="index.html">
-      <div translate-namespace="CONTENT">
+  angular.module('pascalprecht.translate')
+    /**
+     * @ngdoc directive
+     * @name pascalprecht.translate.directive:translateCloak
+     * @requires $translate
+     * @restrict A
+     *
+     * $description
+     * Adds a `translate-cloak` class name to the given element where this directive
+     * is applied initially and removes it, once a loader has finished loading.
+     *
+     * This directive can be used to prevent initial flickering when loading translation
+     * data asynchronously.
+     *
+     * The class name is defined in
+     * {@link pascalprecht.translate.$translateProvider#cloakClassName $translate.cloakClassName()}.
+     *
+     * @param {string=} translate-cloak If a translationId is provided, it will be used for showing
+     *                                  or hiding the cloak. Basically it relies on the translation
+     *                                  resolve.
+     */
+    .directive('translateCloak', translateCloakDirective);
 
-        <div>
-            <h1 translate>.HEADERS.TITLE</h1>
-            <h1 translate>.HEADERS.WELCOME</h1>
-        </div>
+  function translateCloakDirective($translate, $rootScope) {
 
-        <div translate-namespace=".HEADERS">
-            <h1 translate>.TITLE</h1>
-            <h1 translate>.WELCOME</h1>
-        </div>
+    'use strict';
 
-      </div>
-    </file>
-    <file name="script.js">
-      angular.module('ngView', ['pascalprecht.translate'])
+    return {
+      compile : function (tElement) {
+        var applyCloak = function (element) {
+            element.addClass($translate.cloakClassName());
+          },
+          removeCloak = function (element) {
+            element.removeClass($translate.cloakClassName());
+          };
+        applyCloak(tElement);
 
-      .config(function ($translateProvider) {
+        return function linkFn(scope, iElement, iAttr) {
+          //Create bound functions that incorporate the active DOM element.
+          var iRemoveCloak = removeCloak.bind(this, iElement), iApplyCloak = applyCloak.bind(this, iElement);
+          if (iAttr.translateCloak && iAttr.translateCloak.length) {
+            // Register a watcher for the defined translation allowing a fine tuned cloak
+            iAttr.$observe('translateCloak', function (translationId) {
+              $translate(translationId).then(iRemoveCloak, iApplyCloak);
+            });
+            $rootScope.$on('$translateChangeSuccess', function () {
+              $translate(iAttr.translateCloak).then(iRemoveCloak, iApplyCloak);
+            });
+          } else {
+            $translate.onReady(iRemoveCloak);
+          }
+        };
+      }
+    };
+  }
+
+  translateCloakDirective.displayName = 'translateCloakDirective';
+
+  angular.module('pascalprecht.translate')
+    /**
+     * @ngdoc directive
+     * @name pascalprecht.translate.directive:translateNamespace
+     * @restrict A
+     *
+     * @description
+     * Translates given translation id either through attribute or DOM content.
+     * Internally it uses `translate` filter to translate translation id. It is possible to
+     * pass an optional `translate-values` object literal as string into translation id.
+     *
+     * @param {string=} translate namespace name which could be either string or interpolated string.
+     *
+     * @example
+     <example module="ngView">
+     <file name="index.html">
+     <div translate-namespace="CONTENT">
+
+     <div>
+     <h1 translate>.HEADERS.TITLE</h1>
+     <h1 translate>.HEADERS.WELCOME</h1>
+     </div>
+
+     <div translate-namespace=".HEADERS">
+     <h1 translate>.TITLE</h1>
+     <h1 translate>.WELCOME</h1>
+     </div>
+
+     </div>
+     </file>
+     <file name="script.js">
+     angular.module('ngView', ['pascalprecht.translate'])
+
+     .config(function ($translateProvider) {
 
         $translateProvider.translations('en',{
           'TRANSLATION_ID': 'Hello there!',
@@ -3435,82 +3561,82 @@ angular.module('pascalprecht.translate')
 
       });
 
-    </file>
-   </example>
- */
-.directive('translateNamespace', translateNamespaceDirective);
+     </file>
+     </example>
+     */
+    .directive('translateNamespace', translateNamespaceDirective);
 
-function translateNamespaceDirective() {
+  function translateNamespaceDirective() {
 
-  'use strict';
+    'use strict';
 
-  return {
-    restrict: 'A',
-    scope: true,
-    compile: function () {
-      return {
-        pre: function (scope, iElement, iAttrs) {
-          scope.translateNamespace = getTranslateNamespace(scope);
+    return {
+      restrict: 'A',
+      scope: true,
+      compile: function () {
+        return {
+          pre: function (scope, iElement, iAttrs) {
+            scope.translateNamespace = _getTranslateNamespace(scope);
 
-          if (scope.translateNamespace && iAttrs.translateNamespace.charAt(0) === '.') {
-            scope.translateNamespace += iAttrs.translateNamespace;
-          } else {
-            scope.translateNamespace = iAttrs.translateNamespace;
+            if (scope.translateNamespace && iAttrs.translateNamespace.charAt(0) === '.') {
+              scope.translateNamespace += iAttrs.translateNamespace;
+            } else {
+              scope.translateNamespace = iAttrs.translateNamespace;
+            }
           }
-        }
-      };
+        };
+      }
+    };
+  }
+
+  /**
+   * Returns the scope's namespace.
+   * @private
+   * @param scope
+   * @returns {string}
+   */
+  function _getTranslateNamespace(scope) {
+    'use strict';
+    if (scope.translateNamespace) {
+      return scope.translateNamespace;
     }
-  };
-}
-
-/**
- * Returns the scope's namespace.
- * @private
- * @param scope
- * @returns {string}
- */
-function getTranslateNamespace(scope) {
-  'use strict';
-  if (scope.translateNamespace) {
-    return scope.translateNamespace;
+    if (scope.$parent) {
+      return _getTranslateNamespace(scope.$parent);
+    }
   }
-  if (scope.$parent) {
-    return getTranslateNamespace(scope.$parent);
-  }
-}
 
-translateNamespaceDirective.displayName = 'translateNamespaceDirective';
+  translateNamespaceDirective.displayName = 'translateNamespaceDirective';
 
-angular.module('pascalprecht.translate')
-/**
- * @ngdoc directive
- * @name pascalprecht.translate.directive:translateLanguage
- * @restrict A
- *
- * @description
- * Forces the language to the directives in the underlying scope.
- *
- * @param {string=} translate language that will be negotiated.
- *
- * @example
-   <example module="ngView">
-    <file name="index.html">
-      <div>
+  angular.module('pascalprecht.translate')
+    /**
+     * @ngdoc directive
+     * @name pascalprecht.translate.directive:translateLanguage
+     * @restrict A
+     *
+     * @description
+     * Forces the language to the directives in the underlying scope.
+     *
+     * @param {string=} translate language that will be negotiated.
+     *
+     * @example
+     <example module="ngView">
+     <file name="index.html">
+     <div>
 
-        <div>
-            <h1 translate>HELLO</h1>
-        </div>
+     <div>
+     <h1 translate>HELLO</h1>
+     </div>
 
-        <div translate-language="de">
-            <h1 translate>HELLO</h1>
-        </div>
+     <div translate-language="de">
+     <h1 translate>HELLO</h1>
+     </div>
 
-      </div>
-    </file>
-    <file name="script.js">
-      angular.module('ngView', ['pascalprecht.translate'])
+     </div>
+     </file>
+     <file name="script.js">
+     angular.module('ngView', ['pascalprecht.translate'])
 
-      .config(function ($translateProvider) {
+     .config(function ($translateProvider) {
 
         $translateProvider
           .translations('en',{
@@ -3523,68 +3649,68 @@ angular.module('pascalprecht.translate')
 
       });
 
-    </file>
-   </example>
- */
-.directive('translateLanguage', translateLanguageDirective);
+     </file>
+     </example>
+     */
+    .directive('translateLanguage', translateLanguageDirective);
 
-function translateLanguageDirective() {
+  function translateLanguageDirective() {
 
-  'use strict';
+    'use strict';
 
-  return {
-    restrict: 'A',
-    scope: true,
-    compile: function () {
-      return function linkFn(scope, iElement, iAttrs) {
+    return {
+      restrict: 'A',
+      scope: true,
+      compile: function () {
+        return function linkFn(scope, iElement, iAttrs) {
 
-        iAttrs.$observe('translateLanguage', function (newTranslateLanguage) {
-          scope.translateLanguage = newTranslateLanguage;
-        });
+          iAttrs.$observe('translateLanguage', function (newTranslateLanguage) {
+            scope.translateLanguage = newTranslateLanguage;
+          });
 
-        scope.$watch('translateLanguage', function(){
-          scope.$broadcast('translateLanguageChanged');
-        });
-      };
-    }
-  };
-}
+          scope.$watch('translateLanguage', function(){
+            scope.$broadcast('translateLanguageChanged');
+          });
+        };
+      }
+    };
+  }
 
-translateLanguageDirective.displayName = 'translateLanguageDirective';
+  translateLanguageDirective.displayName = 'translateLanguageDirective';
 
-angular.module('pascalprecht.translate')
-/**
- * @ngdoc filter
- * @name pascalprecht.translate.filter:translate
- * @requires $parse
- * @requires pascalprecht.translate.$translate
- * @function
- *
- * @description
- * Uses `$translate` service to translate contents. Accepts interpolate parameters
- * to pass dynamized values though translation.
- *
- * @param {string} translationId A translation id to be translated.
- * @param {*=} interpolateParams Optional object literal (as hash or string) to pass values into translation.
- *
- * @returns {string} Translated text.
- *
- * @example
-   <example module="ngView">
-    <file name="index.html">
-      <div ng-controller="TranslateCtrl">
+  angular.module('pascalprecht.translate')
+    /**
+     * @ngdoc filter
+     * @name pascalprecht.translate.filter:translate
+     * @requires $parse
+     * @requires pascalprecht.translate.$translate
+     * @function
+     *
+     * @description
+     * Uses `$translate` service to translate contents. Accepts interpolate parameters
+     * to pass dynamized values though translation.
+     *
+     * @param {string} translationId A translation id to be translated.
+     * @param {*=} interpolateParams Optional object literal (as hash or string) to pass values into translation.
+     *
+     * @returns {string} Translated text.
+     *
+     * @example
+     <example module="ngView">
+     <file name="index.html">
+     <div ng-controller="TranslateCtrl">
 
-        <pre>{{ 'TRANSLATION_ID' | translate }}</pre>
-        <pre>{{ translationId | translate }}</pre>
-        <pre>{{ 'WITH_VALUES' | translate:'{value: 5}' }}</pre>
-        <pre>{{ 'WITH_VALUES' | translate:values }}</pre>
+     <pre>{{ 'TRANSLATION_ID' | translate }}</pre>
+     <pre>{{ translationId | translate }}</pre>
+     <pre>{{ 'WITH_VALUES' | translate:'{value: 5}' }}</pre>
+     <pre>{{ 'WITH_VALUES' | translate:values }}</pre>
 
-      </div>
-    </file>
-    <file name="script.js">
-      angular.module('ngView', ['pascalprecht.translate'])
+     </div>
+     </file>
+     <file name="script.js">
+     angular.module('ngView', ['pascalprecht.translate'])
 
-      .config(function ($translateProvider) {
+     .config(function ($translateProvider) {
 
         $translateProvider.translations('en', {
           'TRANSLATION_ID': 'Hello there!',
@@ -3594,63 +3720,66 @@ angular.module('pascalprecht.translate')
 
       });
 
-      angular.module('ngView').controller('TranslateCtrl', function ($scope) {
+     angular.module('ngView').controller('TranslateCtrl', function ($scope) {
         $scope.translationId = 'TRANSLATION_ID';
 
         $scope.values = {
           value: 78
         };
       });
-    </file>
-   </example>
- */
-.filter('translate', translateFilterFactory);
+     </file>
+     </example>
+     */
+    .filter('translate', translateFilterFactory);
 
-function translateFilterFactory($parse, $translate) {
+  function translateFilterFactory($parse, $translate) {
 
-  'use strict';
+    'use strict';
 
-  var translateFilter = function (translationId, interpolateParams, interpolation, forceLanguage) {
-    if (!angular.isObject(interpolateParams)) {
-      interpolateParams = $parse(interpolateParams)(this);
+    var translateFilter = function (translationId, interpolateParams, interpolation, forceLanguage) {
+      if (!angular.isObject(interpolateParams)) {
+        var ctx = this || {
+          '__SCOPE_IS_NOT_AVAILABLE': 'More info at https://github.com/angular/angular.js/commit/8863b9d04c722b278fa93c5d66ad1e578ad6eb1f'
+        };
+        interpolateParams = $parse(interpolateParams)(ctx);
+      }
+
+      return $translate.instant(translationId, interpolateParams, interpolation, forceLanguage);
+    };
+
+    if ($translate.statefulFilter()) {
+      translateFilter.$stateful = true;
     }
 
-    return $translate.instant(translationId, interpolateParams, interpolation, forceLanguage);
-  };
-
-  if ($translate.statefulFilter()) {
-    translateFilter.$stateful = true;
+    return translateFilter;
   }
 
-  return translateFilter;
-}
+  translateFilterFactory.displayName = 'translateFilterFactory';
 
-translateFilterFactory.displayName = 'translateFilterFactory';
+  angular.module('pascalprecht.translate')
 
-angular.module('pascalprecht.translate')
+    /**
+     * @ngdoc object
+     * @name pascalprecht.translate.$translationCache
+     * @requires $cacheFactory
+     *
+     * @description
+     * The first time a translation table is used, it is loaded in the translation cache for quick retrieval. You
+     * can load translation tables directly into the cache by consuming the
+     * `$translationCache` service directly.
+     *
+     * @return {object} $cacheFactory object.
+     */
+    .factory('$translationCache', $translationCache);
 
-/**
- * @ngdoc object
- * @name pascalprecht.translate.$translationCache
- * @requires $cacheFactory
- *
- * @description
- * The first time a translation table is used, it is loaded in the translation cache for quick retrieval. You
- * can load translation tables directly into the cache by consuming the
- * `$translationCache` service directly.
- *
- * @return {object} $cacheFactory object.
- */
-  .factory('$translationCache', $translationCache);
+  function $translationCache($cacheFactory) {
 
-function $translationCache($cacheFactory) {
+    'use strict';
 
-  'use strict';
+    return $cacheFactory('translations');
+  }
 
-  return $cacheFactory('translations');
-}
-
-$translationCache.displayName = '$translationCache';
-return 'pascalprecht.translate';
+  $translationCache.displayName = '$translationCache';
+  return 'pascalprecht.translate';
 
 }));
